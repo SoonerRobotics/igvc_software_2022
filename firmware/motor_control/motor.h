@@ -1,0 +1,191 @@
+#ifndef MOTOR_H
+#define MOTOR_H
+
+#define <Servo>
+
+#define ServoMinWidth 1000
+#define ServoMaxWidth 2000
+
+#define MOTOR_UPDATE_RATE 1000 // Frequency that motor PID is updated (Hz)
+#define MAX_SPEED 2.2f // (m/s)
+#define PULSES_PER_REV 2400 // (revs)
+//#define LINEAR_PER_REV 0.2054f // Wheel radius (m) old
+#define LINEAR_PER_REV 0.2032f // Wheel radius (m)
+#define MILLIS_TO_FULL 80 // Milliseconds to go from 0 output speed to 1
+#define LPIIR_DECAY 0.1f // Decay rate of low pass filter on velocity
+
+#define PI 3.14159265f
+#define INCREMENT_AMT (1000.0f / (MILLIS_TO_FULL * MOTOR_UPDATE_RATE))
+
+#define PREV_MASK 0x1 // Mask for the previous state in determining direction of rotation.
+#define CURR_MASK 0x2 // Mask for the current state in determining direction of rotation.
+#define INVALID   0x3 // XORing two states where both bits have changed.
+
+#define DEADZONE 5
+
+class motor {
+  int PWM_Pin;
+  
+  bool disabled = LOW;
+  int defaultOnZero = HIGH;
+
+  float targetSpeed = 0.0f;
+  float currentOutput = 0.0f;
+  float currentSpeed = 0.0f;
+  // PID
+  float integrator = 0.0f;
+  float error = 0.0f;
+  // states
+  float prevError = 0.0f;
+  float lastState = 0.0f;
+
+  int prevState_;
+  int currState_;
+  volatile int pulses;
+
+  
+  // equations
+  float kp = 0.05f;
+  float ki = 0.0f;
+  float kd = 0.0f;
+f  
+  
+  Servo motorServo;
+  public:
+    motor(int PWM_Motor, bool reverse = true)
+    {
+      this->PWM_Pin;
+      this_>motorServo.attach(this->PWM_Pin, ServoMinWidth, ServoMaxWidth);
+    }
+
+    void output(float speed){
+        this->targetSpeed = speed;
+    }
+    //stolen from igvc 21 / QEI library
+    void pulse(int left, int right)
+    {
+      currState_ = (left << 1) | (right);
+
+      //11->00->11->00
+      //11->00->11->00 is counter clockwise rotation or "forward".
+            if ((prevState_ == 0x3 && currState_ == 0x0) ||
+                    (prevState_ == 0x0 && currState_ == 0x3)) {
+                this->pulses++;
+            }
+            //10->01->10->01 is clockwise rotation or "backward".
+            else if ((prevState_ == 0x2 && currState_ == 0x1) ||
+                     (prevState_ == 0x1 && currState_ == 0x2)) {
+                this->pulses--;
+            }
+            
+            prevState_ = currState_;
+            if (curOutput < 0.01f && curOutput > -0.01f) { // break
+              
+            }
+    }
+    void brake(){
+      this->motorServo.write(90);
+    }
+    void out2servo(float out)
+    {
+      int servoOut;
+      if(reverse)
+        out = -out;
+      
+      if (out < 0.01f && out > -0.01f)
+      { // break
+        servoOut = 0;
+      }
+      else if (curOutput > 0.0f) 
+      { // forward
+        out = out * 85;
+        servoOut = (int)(90 + DEADZONE + out)
+      }
+      else //backward
+      {
+       out = out * 85;
+       servoOut = (int)(90 + DEADZONE + out)
+      }
+
+      return servOut;
+    }
+    
+    void update(){
+      float instantaneousSpeed = this->pulses / (float)PULSES_PER_REV * 2.0 * PI * LINEAR_PER_REV * MOTOR_UPDATE_RATE;
+      this->speedEstimate += (1.0f - LPIIR_DECAY) * (instantaneousSpeed - this->speedEstimate); // Low pass filter our speed estimate
+      float output = this->updatePID(this->targetSpeed, this->speedEstimate);
+      curOutput += output;
+
+      this->pulses = 0;
+      int servoOut = out2servo(curOutput);
+      motor.write(servoOut);
+      
+    }
+
+      float getSpeedEstimate() 
+      {
+        return this->speedEstimate;
+      }
+        
+      IGVCMotor& operator= (float v) 
+      {
+        output(v);
+        return *this;
+      }
+            // Adapted (Stolen) from RobotLib :)
+        float updatePID(float target_state, float cur_state) {            
+            // Declare local variables
+            float P, I, D;
+            float result;
+            float slope;
+            float dt;
+            
+            // Get the time step
+            dt = 1.0f/MOTOR_UPDATE_RATE;
+            
+            // Calculate error
+            this->error = target_state - cur_state;
+            
+            // Integrate error using trapezoidal Riemann sums
+            this->prev_error = target_state - this->last_state;
+            this->integrator += 0.5f * (this->error + this->prev_error) * dt;
+            
+            // Find the slope of the error curve using secant approximation
+            slope = (cur_state - this->last_state) / dt;
+            
+            // Apply PID gains
+            P = this->kP * this->error;
+            I = this->kI * this->integrator;
+            D = this->kD * slope;
+            
+            // Sum P, I, D to get the result of the equation
+            // Bind the output if needed
+            result = clamp(P + I + D, -INCREMENT_AMT, INCREMENT_AMT);
+            
+            // Update timing and increment to the next state
+            this->last_state = cur_state;
+            
+            // Return the PID result
+            return result;
+        }
+        
+        static float clamp(float val, float min, float max)
+        {
+            if(val > max)
+            {
+                return max;
+            }
+            else if(val < min)
+            {
+                return min;
+            }
+            return val;
+        }
+    
+    
+  private:
+  
+  
+}
+
+#endif

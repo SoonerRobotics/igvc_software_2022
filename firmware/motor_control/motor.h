@@ -1,7 +1,7 @@
 #ifndef MOTOR_H
 #define MOTOR_H
 
-#define <Servo>
+#include <Servo.h>
 
 #define ServoMinWidth 1000
 #define ServoMaxWidth 2000
@@ -32,6 +32,8 @@ class motor {
   float targetSpeed = 0.0f;
   float currentOutput = 0.0f;
   float currentSpeed = 0.0f;
+  float speedEstimate = 0.0f;
+  
   // PID
   float integrator = 0.0f;
   float error = 0.0f;
@@ -47,15 +49,15 @@ class motor {
   // equations
   float kp = 0.05f;
   float ki = 0.0f;
-  float kd = 0.0f;
-f  
+  float kd = 0.0f;  
+  bool reverse = false;
   
   Servo motorServo;
   public:
-    motor(int PWM_Motor, bool reverse = true)
+    motor(int PWM_Motor, bool reverse = false)
     {
-      this->PWM_Pin;
-      this_>motorServo.attach(this->PWM_Pin, ServoMinWidth, ServoMaxWidth);
+      this->PWM_Pin = PWM_Motor;
+      this->motorServo.attach(this->PWM_Pin, ServoMinWidth, ServoMaxWidth);
     }
 
     void output(float speed){
@@ -79,14 +81,14 @@ f
             }
             
             prevState_ = currState_;
-            if (curOutput < 0.01f && curOutput > -0.01f) { // break
+            if (currentOutput < 0.01f && currentOutput > -0.01f) { // break
               
             }
     }
     void brake(){
       this->motorServo.write(90);
     }
-    void out2servo(float out)
+    int out2servo(float out)
     {
       int servoOut;
       if(reverse)
@@ -96,29 +98,29 @@ f
       { // break
         servoOut = 0;
       }
-      else if (curOutput > 0.0f) 
+      else if (currentOutput > 0.0f) 
       { // forward
         out = out * 85;
-        servoOut = (int)(90 + DEADZONE + out)
+        servoOut = (int)(90 + DEADZONE + out);
       }
       else //backward
       {
        out = out * 85;
-       servoOut = (int)(90 + DEADZONE + out)
+       servoOut = (int)(90 + DEADZONE + out);
       }
 
-      return servOut;
+      return servoOut;
     }
     
     void update(){
       float instantaneousSpeed = this->pulses / (float)PULSES_PER_REV * 2.0 * PI * LINEAR_PER_REV * MOTOR_UPDATE_RATE;
       this->speedEstimate += (1.0f - LPIIR_DECAY) * (instantaneousSpeed - this->speedEstimate); // Low pass filter our speed estimate
       float output = this->updatePID(this->targetSpeed, this->speedEstimate);
-      curOutput += output;
+      currentOutput += output;
 
       this->pulses = 0;
-      int servoOut = out2servo(curOutput);
-      motor.write(servoOut);
+      int servoOut = out2servo(currentOutput);
+      motorServo.write(servoOut);
       
     }
 
@@ -127,7 +129,7 @@ f
         return this->speedEstimate;
       }
         
-      IGVCMotor& operator= (float v) 
+      motor& operator= (float v) 
       {
         output(v);
         return *this;
@@ -147,23 +149,23 @@ f
             this->error = target_state - cur_state;
             
             // Integrate error using trapezoidal Riemann sums
-            this->prev_error = target_state - this->last_state;
-            this->integrator += 0.5f * (this->error + this->prev_error) * dt;
+            this->prevError = target_state - this->lastState;
+            this->integrator += 0.5f * (this->error + this->prevError) * dt;
             
             // Find the slope of the error curve using secant approximation
-            slope = (cur_state - this->last_state) / dt;
+            slope = (cur_state - this->lastState) / dt;
             
             // Apply PID gains
-            P = this->kP * this->error;
-            I = this->kI * this->integrator;
-            D = this->kD * slope;
+            P = this->kp * this->error;
+            I = this->ki * this->integrator;
+            D = this->kd * slope;
             
             // Sum P, I, D to get the result of the equation
             // Bind the output if needed
             result = clamp(P + I + D, -INCREMENT_AMT, INCREMENT_AMT);
             
             // Update timing and increment to the next state
-            this->last_state = cur_state;
+            this->lastState = cur_state;
             
             // Return the PID result
             return result;
@@ -183,9 +185,7 @@ f
         }
     
     
-  private:
   
-  
-}
+};
 
 #endif

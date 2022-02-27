@@ -16,7 +16,16 @@ typedef struct{
     unsigned int task_1000ms: 1;
   
 }tasks_t;
+
+typedef struct{
+    unsigned int eStop : 1;
+    unsigned int mStop : 1;
+    unsigned int mStart : 1;
+}robotStatus_t;
+
 tasks_t mainTasks;
+
+robotStatus_t robotStatus;
 
 unsigned int ms_count = 0; // count associated with 
 void set_ms_flags(){

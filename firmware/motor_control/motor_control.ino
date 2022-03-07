@@ -1,5 +1,6 @@
 #include "common.h"
 #include "motor.h"
+#include <FlexCAN_T4.h>
 IntervalTimer mainTaskTimer;
 
 /*
@@ -8,38 +9,39 @@ IntervalTimer mainTaskTimer;
 //
 
 const int ledPin = LED_BUILTIN;
-const int encoderLeftA = -1;
-const int encoderLeftB = -1;
-const int encoderRightA = -1;
-const int encoderRightB = -1; 
+const int encoderLeftB = 6;
+const int encoderLeftA = 5;
+const int encoderRightA = 8;
+const int encoderRightB = 9; 
 
-const int leftMotorPin = -1;
-const int rightMotorPin = -1;
+const int leftMotorPin = 2;
+const int rightMotorPin = 3;
 
-motor leftMotor(leftMotorPin, false);
-motor rightMotor(rightMotorPin, true);
+motor leftMotor(leftMotorPin, true);
+motor rightMotor(rightMotorPin, false);
 
 FlexCAN_T4<CAN1, RX_SIZE_256, TX_SIZE_16> Can0;
- CAN_message_t lastMSG;
- float targetLeftSpeed;
- float targetRightSpeed;
+CAN_message_t lastMSG;
+float targetLeftSpeed;
+float targetRightSpeed;
+long counter = 0;
 
 void setup() {
   // put your setup code here, to run once:
   pinMode(ledPin, OUTPUT);
-  pinMode(encoderLeftA, INPUT);
-  pinMode(encoderLeftB, INPUT);
-  pinMode(encoderRightA, INPUT);
-  pinMode(encoderRightB, INPUT);
+  pinMode(encoderLeftA, INPUT_PULLUP);
+  pinMode(encoderLeftB, INPUT_PULLUP);
+  pinMode(encoderRightA, INPUT_PULLUP);
+  pinMode(encoderRightB, INPUT_PULLUP);
 
   Serial.begin(9600);
   mainTaskTimer.begin(set_ms_flags, 1000); // calls this function every 1ms
 
-  attachInterrupt(encoderLeftA, updateLeft, RISE);
-  attachInterrupt(encoderLeftB, updateLeft, FALL);
+  attachInterrupt(encoderLeftA, updateLeft, CHANGE);
+  //attachInterrupt(encoderLeftB, updateLeft, CHANGE);
 
-  attachInterrupt(encoderRightA, updateRight, RISE);
-  attachInterrupt(encoderRightB, updateRight, FALL);  
+  attachInterrupt(encoderRightA, updateRight, CHANGE);
+  //attachInterrupt(encoderRightB, updateRight, CHANGE);  
 
   Can0.begin();
   Can0.setBaudRate(1000000);
@@ -49,11 +51,19 @@ void setup() {
   Can0.onReceive(receiveMSG);
   Can0.mailboxStatus();
 
+  leftMotor = 0;
+  rightMotor = 0;
+  digitalWrite(20, HIGH);
+
+  while(Serial.available() == 0) {
+    }
 }
+
+bool tog = false;
 
 void receiveMSG(const CAN_message_t &msg){
   if (!robotStatus.eStop){
-    self.lastMSG = msg;
+    lastMSG = msg;
     switch (msg.id){
       case 0:
         robotStatus.eStop = 1;
@@ -74,6 +84,7 @@ void receiveMSG(const CAN_message_t &msg){
 
 void updateLeft()
 {
+  //Serial.printf("left update \n");
   leftMotor.pulse(digitalRead(encoderLeftA),digitalRead(encoderLeftB));
 }
 void updateRight()
@@ -99,9 +110,7 @@ void loop() {
   if(!robotStatus.eStop){
     if(mainTasks.task_1ms)
     {
-      //Code here
-      leftMotor.update();
-      rightMotor.update();
+
 
       mainTasks.task_1ms = 0;
     }
@@ -116,18 +125,31 @@ void loop() {
     if(mainTasks.task_10ms)
     {
       //Code here
-      
+      leftMotor.update();
+      rightMotor.update();
+
+
+      Serial.printf("rightspeed %f ", leftMotor.getSpeedEstimate());
+      Serial.printf("targetspeed %f \n", targetRightSpeed);
       mainTasks.task_10ms = 0;
     }
     if(mainTasks.task_100ms)
     {
       mainTasks.task_100ms = 0;
+      targetRightSpeed = cos(.1 * counter);
+      rightMotor = targetRightSpeed;
+      leftMotor = targetRightSpeed;
+      counter++;
       //Code here
+      
       
     }
     if(mainTasks.task_1000ms)
     {
+
       //Code here
+      //leftMotor = 0.15f;
+      
     
       mainTasks.task_1000ms = 0;
     }

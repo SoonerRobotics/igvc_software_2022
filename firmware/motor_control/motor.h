@@ -6,9 +6,9 @@
 #define ServoMinWidth 1000
 #define ServoMaxWidth 2000
 
-#define MOTOR_UPDATE_RATE 1000 // Frequency that motor PID is updated (Hz)
+#define MOTOR_UPDATE_RATE 100 // Frequency that motor PID is updated (Hz)
 #define MAX_SPEED 2.2f // (m/s)
-#define PULSES_PER_REV 2400 // (revs)
+#define PULSES_PER_REV (600 * 7 * 2) // (revs)
 //#define LINEAR_PER_REV 0.2054f // Wheel radius (m) old
 #define LINEAR_PER_REV 0.2032f // Wheel radius (m)
 #define MILLIS_TO_FULL 80 // Milliseconds to go from 0 output speed to 1
@@ -43,7 +43,7 @@ class motor {
 
   int prevState_;
   int currState_;
-  volatile int pulses;
+  volatile int pulses = 0;
 
   
   // equations
@@ -58,14 +58,19 @@ class motor {
     {
       this->PWM_Pin = PWM_Motor;
       this->motorServo.attach(this->PWM_Pin, ServoMinWidth, ServoMaxWidth);
+      this->reverse = reverse;
     }
 
     void output(float speed){
+        if(this->reverse){
+          //speed = -speed;
+        }
         this->targetSpeed = speed;
     }
     //stolen from igvc 21 / QEI library
     void pulse(int left, int right)
     {
+      //Serial.printf("left %d, right %d \n", left, right);
       currState_ = (left << 1) | (right);
 
       //11->00->11->00
@@ -90,13 +95,15 @@ class motor {
     }
     int out2servo(float out)
     {
-      int servoOut;
-      if(reverse)
-        out = -out;
       
+      if(this->reverse)
+        out = -out;
+      out = out / MAX_SPEED;
+      int servoOut;
+      Serial.printf("servo in %f \n",out);
       if (out < 0.01f && out > -0.01f)
       { // break
-        servoOut = 0;
+        servoOut = 90;
       }
       else if (currentOutput > 0.0f) 
       { // forward
@@ -106,18 +113,27 @@ class motor {
       else //backward
       {
        out = out * 85;
-       servoOut = (int)(90 + DEADZONE + out);
+       servoOut = (int)(90 -DEADZONE + out);
       }
-
+      Serial.printf("servo out %f \n",(float)(servoOut -90)/ 180);
       return servoOut;
     }
     
     void update(){
+      //printf("pulses %d", this->pulses);
       float instantaneousSpeed = this->pulses / (float)PULSES_PER_REV * 2.0 * PI * LINEAR_PER_REV * MOTOR_UPDATE_RATE;
+      if(this->reverse){
+        instantaneousSpeed = -instantaneousSpeed;
+      }
+      Serial.printf("Instantaneuos speed %f \n", instantaneousSpeed);
       this->speedEstimate += (1.0f - LPIIR_DECAY) * (instantaneousSpeed - this->speedEstimate); // Low pass filter our speed estimate
-      float output = this->updatePID(this->targetSpeed, this->speedEstimate);
-      currentOutput += output;
+      float pidOUT = this->updatePID(this->targetSpeed, this->speedEstimate);
+      //Serial.printf("pid output %f \n", pidOUT);
+      currentOutput += pidOUT;
 
+      currentOutput = clamp(currentOutput, -MAX_SPEED, MAX_SPEED);
+      Serial.println("curr output");
+      Serial.println(currentOutput);
       this->pulses = 0;
       int servoOut = out2servo(currentOutput);
       motorServo.write(servoOut);
@@ -126,7 +142,13 @@ class motor {
 
       float getSpeedEstimate() 
       {
+       //Serial.printf("target speed: %f \n", this->targetSpeed);
+        
         return this->speedEstimate;
+      }
+
+      int getPulses(){
+        return this->pulses;
       }
         
       motor& operator= (float v) 
@@ -147,6 +169,7 @@ class motor {
             
             // Calculate error
             this->error = target_state - cur_state;
+            //Serial.printf("error %f \n", this->error);
             
             // Integrate error using trapezoidal Riemann sums
             this->prevError = target_state - this->lastState;
@@ -159,7 +182,7 @@ class motor {
             P = this->kp * this->error;
             I = this->ki * this->integrator;
             D = this->kd * slope;
-            
+            I = clamp(I, -INCREMENT_AMT * .25, INCREMENT_AMT * .25);
             // Sum P, I, D to get the result of the equation
             // Bind the output if needed
             result = clamp(P + I + D, -INCREMENT_AMT, INCREMENT_AMT);

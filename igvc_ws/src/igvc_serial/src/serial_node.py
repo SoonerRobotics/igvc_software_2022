@@ -34,9 +34,9 @@ class VelocityCANReadThread(threading.Thread):
 
         self.can_obj = can_obj
         
-        self.f = open("/home/zemlin/igvc_software_2021/igvc_ws/encoder_out.csv", "w")
+        # self.f = open("/home/zemlin/igvc_software_2021/igvc_ws/encoder_out.csv", "w")
         
-        self.csvwriter = csv.writer(self.f)
+        # self.csvwriter = csv.writer(self.f)
 
         # Allow timeout of up to 1 second on reads. This could be set to None to have infinite timeout,
         # but that would hault the node when it tries to exit. Need to make sure the while loop condition is
@@ -64,7 +64,7 @@ class VelocityCANReadThread(threading.Thread):
                 
                 # print(f"vel {velPkt.leftVel}, {velPkt.rightVel}")
                 
-                self.csvwriter.writerow([rospy.Time.now(), velPkt.leftVel, velPkt.rightVel])
+                # self.csvwriter.writerow([rospy.Time.now(), velPkt.leftVel, velPkt.rightVel])
 
                 self.publisher.publish(velPkt)
             

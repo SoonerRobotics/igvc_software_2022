@@ -136,7 +136,7 @@ def timer_callback(event):
     else:
         # We couldn't find a suitable direction to head, stop the robot.
         if back_count == -1:
-            back_count = 5
+            back_count = 8
         else:
             back_count -= 1
         

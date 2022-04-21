@@ -50,7 +50,8 @@ cost_map = None
 
 # Latest EKF update
 curEKF = EKFState()
-next_waypoint = (42.6683345, -83.2182354)
+waypoints = []
+#waypoints = [(42.6683345, -83.2182354)]
 
 # Best position to head to on the map (D* goal pos)
 best_pos = (0,0)
@@ -95,17 +96,19 @@ def c_space_callback(c_space):
     frontier.add((50,99))
     explored = set()
 
-    north_to_gps = (next_waypoint[0] - curEKF.latitude) * 111086.2
-    west_to_gps = (curEKF.longitude - next_waypoint[1]) * 81978.2
-    heading_to_gps = math.atan2(west_to_gps,north_to_gps) % (2 * math.pi)
+    if len(waypoints) > 0:
+        next_waypoint = waypoints[0]
+        north_to_gps = (next_waypoint[0] - curEKF.latitude) * 111086.2
+        west_to_gps = (curEKF.longitude - next_waypoint[1]) * 81978.2
+        heading_to_gps = math.atan2(west_to_gps,north_to_gps) % (2 * math.pi)
 
-    print(f"heading_to_gps: {heading_to_gps*180/math.pi:0.01f}")
+        # print(f"heading_to_gps: {heading_to_gps*180/math.pi:0.01f}")
 
-    if north_to_gps**2 + west_to_gps**2 <= 3:
-        mobi_start_publisher.publish(Bool(False))
+        if north_to_gps**2 + west_to_gps**2 <= 3:
+            mobi_start_publisher.publish(Bool(False))
 
-    sys.stdout.flush()
-    best_heading_err = 0
+    # sys.stdout.flush()
+    # best_heading_err = 0
 
     depth = 0
     while depth < 50 and len(frontier) > 0:
@@ -117,12 +120,16 @@ def c_space_callback(c_space):
             # - Negative X value (encourage forward)
             # - Positive Y value (discourage left/right)
             # - Heading
-            heading_err_to_gps = abs(get_angle_diff(curEKF.yaw + math.atan2(50-x,100-y), heading_to_gps)) * 180 / math.pi
-            cost = (100 - y) + depth * 4 + (180 - heading_err_to_gps)
+            cost = (100 - y) + depth * 4
+
+            if len(waypoints) > 0:
+                heading_err_to_gps = abs(get_angle_diff(curEKF.yaw + math.atan2(50-x,100-y), heading_to_gps)) * 180 / math.pi
+                cost += (180 - heading_err_to_gps)
+
             if cost > best_pos_cost:
                 best_pos_cost = cost
                 temp_best_pos = pos
-                best_heading_err = heading_err_to_gps
+                # best_heading_err = heading_err_to_gps
 
             frontier.remove(pos)
             explored.add(x + 100 * y)
@@ -139,7 +146,7 @@ def c_space_callback(c_space):
 
         depth += 1
 
-    print(f"best_heading_err: {best_heading_err:0.01f}")
+    # print(f"best_heading_err: {best_heading_err:0.01f}")
 
     # map_reference = (curEKF.x, curEKF.y, curEKF.yaw)
     map_reference = (0,0,0)
@@ -199,14 +206,14 @@ def find_path_to_point(start, goal, map, width, height):
 
     path = {}
 
-    search_dirs = [(-1, 0), (-1, 1), (1, 1), (1, 0), (0, 1), (0, -1)]
+    search_dirs = [(-1, 0,1), (-1, 1,1.41), (1, 1,1.41), (1, 0,1), (0, 1,1), (0, -1,1)]
 
     def h(point):
         return math.sqrt((goal[0] - point[0])**2 + (goal[1] - point[1])**2)
 
     # assumes adjacent pts
-    def d(to_pt):
-        return 1 + map[to_pt[1] * width + to_pt[0]] / 10
+    def d(to_pt, dist):
+        return dist + map[to_pt[1] * width + to_pt[0]] / 10
 
     gScore = {}
     gScore[start] = 0
@@ -245,13 +252,13 @@ def find_path_to_point(start, goal, map, width, height):
             return reconstruct_path(path, current)
 
         open_set.remove(current)
-        for delta_x, delta_y in search_dirs:
+        for delta_x, delta_y, dist in search_dirs:
 
             neighbor = (current[0] + delta_x, current[1] + delta_y)
             if neighbor[0] < 0 or neighbor[0] >= width or neighbor[1] < 0 or neighbor[1] >= height:
                 continue
 
-            tentGScore = getG(current) + d(neighbor)
+            tentGScore = getG(current) + d(neighbor, dist)
             if tentGScore < getG(neighbor):
                 path[neighbor] = current
                 gScore[neighbor] = tentGScore

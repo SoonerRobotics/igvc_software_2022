@@ -105,7 +105,7 @@ def timer_callback(event):
     motor_pkt.left = 0
     motor_pkt.right = 0
 
-    if lookahead is not None and ((lookahead[1] - cur_pos[1]) ** 2 + (lookahead[0] - cur_pos[0]) ** 2) > 0.001:
+    if back_count >= 0 or (lookahead is not None and ((lookahead[1] - cur_pos[1]) ** 2 + (lookahead[0] - cur_pos[0]) ** 2) > 0.001):
         # Get heading to to lookahead from current position
         heading_to_lookahead = math.atan2(lookahead[1] - cur_pos[1], lookahead[0] - cur_pos[0])
 
@@ -128,13 +128,18 @@ def timer_callback(event):
         # Define wheel linear velocities
         # Add proprtional error for turning.
         # TODO: PID instead of just P
-        motor_pkt.left = (forward_speed - clamp(0.5 * error, -0.25, 0.25))
-        motor_pkt.right = (forward_speed + clamp(0.5 * error, -0.25, 0.25))
+        motor_pkt.left = (forward_speed - clamp(0.4 * error, -0.25, 0.25))
+        motor_pkt.right = (forward_speed + clamp(0.4 * error, -0.25, 0.25))
 
     else:
         # We couldn't find a suitable direction to head, stop the robot.
-        motor_pkt.left = -0.25
-        motor_pkt.right = -0.25
+        if back_count == -1:
+            back_count = 5
+        else:
+            back_count -= 1
+        
+        motor_pkt.left = -0.2
+        motor_pkt.right = -0.2
 
     if system_state == SystemState.AUTONOMOUS:
         publy.publish(motor_pkt)

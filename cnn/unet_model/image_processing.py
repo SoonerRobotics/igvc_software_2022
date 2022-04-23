@@ -3,10 +3,8 @@ import os
 import numpy as np
 import re
 
-# Read a single PNG file
-def readPNG(filename, processing = None):
+def readVideo(image, processing = None):
     # Load the image using OpenCV into numpy array
-    image = cv2.imread(filename)
 
     # Process image
     if processing == 'in':
@@ -33,18 +31,3 @@ def post_process(image, threshold = None):
     image = cv2.transpose(image * 255.0)
     image = cv2.resize(image, (1024, 576))
     return image
-
-# Read a set of PNG files
-def read_images_from_directory(directory, file_regexp, whitelist = None, processing = None):
-    print("Reading from ", directory, file_regexp)
-
-    files = sorted(os.listdir(directory))
-
-    if whitelist is None:
-        list_of_images = [readPNG(directory + "/" + f, processing) for f in files if re.search(file_regexp, f)]
-        file_names = [f for f in files if re.search(file_regexp, f)]
-    else:
-        list_of_images = [readPNG(directory + "/" + f, processing) for f in files if re.search(file_regexp, f) and f in whitelist]
-        file_names = [f for f in files if re.search(file_regexp, f) and f in whitelist]
-
-    return np.array(list_of_images, dtype=np.float32), file_names

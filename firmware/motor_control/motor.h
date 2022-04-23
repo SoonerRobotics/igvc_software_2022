@@ -100,7 +100,7 @@ class motor {
         out = -out;
       out = out / MAX_SPEED;
       int servoOut;
-      Serial.printf("servo in %f \n",out);
+      //Serial.printf("servo in %f \n",out);
       if (out < 0.01f && out > -0.01f)
       { // break
         servoOut = 90;
@@ -115,7 +115,7 @@ class motor {
        out = out * 85;
        servoOut = (int)(90 -DEADZONE + out);
       }
-      Serial.printf("servo out %f \n",(float)(servoOut -90)/ 180);
+      //Serial.printf("servo out %f \n",(float)(servoOut -90)/ 180);
       return servoOut;
     }
     
@@ -125,15 +125,15 @@ class motor {
       if(this->reverse){
         instantaneousSpeed = -instantaneousSpeed;
       }
-      Serial.printf("Instantaneuos speed %f \n", instantaneousSpeed);
+      //Serial.printf("Instantaneuos speed %f \n", instantaneousSpeed);
       this->speedEstimate += (1.0f - LPIIR_DECAY) * (instantaneousSpeed - this->speedEstimate); // Low pass filter our speed estimate
       float pidOUT = this->updatePID(this->targetSpeed, this->speedEstimate);
       //Serial.printf("pid output %f \n", pidOUT);
       currentOutput += pidOUT;
 
       currentOutput = clamp(currentOutput, -MAX_SPEED, MAX_SPEED);
-      Serial.println("curr output");
-      Serial.println(currentOutput);
+      //Serial.println("curr output");
+      //Serial.println(currentOutput);
       this->pulses = 0;
       int servoOut = out2servo(currentOutput);
       motorServo.write(servoOut);

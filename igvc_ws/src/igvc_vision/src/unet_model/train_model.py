@@ -30,7 +30,7 @@ def train(args):
     print("ins: ", ins.shape)
     print("outs: ", outs.shape)
 
-    model = SCRUNet()
+    model = unet()
         
     # Report if verbosity is turned on
     if args.verbose >= 1:

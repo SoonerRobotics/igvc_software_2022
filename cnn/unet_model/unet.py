@@ -2,7 +2,11 @@ import tensorflow as tf
 from tensorflow import keras
 from tensorflow.keras import datasets, layers, models
 
-def unet():
+def SCRUNet():
+
+    # the initial input layer is a 256 x 256 rgb image.
+    # conventional U-nets use 512x512 images, but it is reduced to 
+    # 256 x 256 input size for simplicity
     inp = layers.Input(shape=(256, 256, 3))
 
     # Convolution layers to help learn some basic kernels

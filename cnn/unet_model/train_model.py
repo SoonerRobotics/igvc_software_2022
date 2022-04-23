@@ -14,6 +14,7 @@ def split_data(args, valid_percent = 0.15):
     outs, out_filenames = read_images_from_directory("input/igvc_outs", "out[\d]*.png", processing='out')
     ins, in_filenames = read_images_from_directory("input/igvc_ins", "out[\d]*.png", whitelist=out_filenames, processing='in')
 
+    #print(outs)
     # Process outputs
     outs = np.expand_dims(outs, axis=3)
 

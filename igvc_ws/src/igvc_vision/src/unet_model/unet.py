@@ -6,29 +6,34 @@ def unet():
     inp = layers.Input(shape=(256, 256, 3))
 
     # Convolution layers to help learn some basic kernels
-    down_samples = [0] * 4
-    down_samples[0] = layers.Conv2D(8, (3, 3), strides=(1, 1), padding='same', activation='relu')(inp) 
-    # Down sampling
-    for x in range(1,3):
-        down_samples[x] = layers.Conv2D(16, kernel_size=(3, 3), strides=(2,2), padding='same', activation='relu')(down_samples[x-1])
-    # Most compressed layer in the network
-    print(down_samples)
-    latent = layers.Conv2D(16, kernel_size=(3, 3), strides=(2,2), padding='same', activation='relu')(down_samples[3])
+    down0 = layers.Conv2D(8, (3, 3), strides=(1, 1), padding='same', activation='relu')(inp) 
+    pool1 = tf.keras.layers.MaxPooling2D(pool_size = (2,2))(down0)
 
-    # Upsampling with skip connections
-    up_samples =  [0] * 4
-    skip = []
-    up_samples[0] = layers.Conv2DTranspose(24, (3, 3), strides=(2,2), padding='same', activation='relu')(latent)
-    skip[0] = layers.Concatenate()([up_samples[0], down_samples[3]])
-    
-    # Down sampling
-    for x in range(1, 3):
-        up_samples[x] = layers.Conv2DTranspose(24, (3, 3), strides=(2,2), padding='same', activation='relu')(skip[x-1]) 
-        skip[x] = layers.Concatenate()([x, down_samples[3-x]])
+    down1 = layers.Conv2D(16, kernel_size=(3, 3), strides=(2,2), padding='same', activation='relu')(pool1)
+    pool2 = tf.keras.layers.MaxPooling2D(pool_size = (2,2))(down1)
+
+    down2 = layers.Conv2D(24, kernel_size=(3, 3), strides=(2,2), padding='same', activation='relu')(pool2)
+    pool3 = tf.keras.layers.MaxPooling2D(pool_size = (2,2))(down2)
+
+    down3 = layers.Conv2D(24, kernel_size=(3, 3), strides=(2,2), padding='same', activation='relu')(pool3)
+    pool4 = tf.keras.layers.MaxPooling2D(pool_size = (2,2))(down3)
+
+    #up sampling
+    up0 = layers.Conv2DTranspose(24, (3, 3), strides=(2,2), padding='same', activation='relu')(pool4)    
+    up0 = layers.UpSampling2D(size=(4,4)) (up0)
+    skip0 = layers.Concatenate()([up0, down2])
+
+    up1 = layers.Conv2DTranspose(24, (3, 3), strides=(2,2), padding='same', activation='relu')(skip0)
+    up1 = layers.UpSampling2D(size=(2,2)) (up1)
+    skip1 = layers.Concatenate()([up1, down1])
+
+    up2 = layers.Conv2DTranspose(16, (3, 3), strides=(2,2), padding='same', activation='relu')(skip1)
+    up2 = layers.UpSampling2D(size=(2,2)) (up2)
+    skip2 = layers.Concatenate()([up2, down0])
+    up3 = layers.Conv2DTranspose(8, (3, 3), strides=(1,1), padding='same', activation='relu')(skip2)
 
     # Post convolution layers
-    post_conv = layers.Conv2DTranspose(8, (3, 3), strides=(1, 1), padding='same', activation='relu')(skip[3])
-    output = layers.Conv2DTranspose(1, (1, 1), strides=(1,1), padding='same', activation='sigmoid')(post_conv)
+    output = layers.Conv2DTranspose(1, (1, 1), strides=(1,1), padding='same', activation='sigmoid')(up3)
 
     model = models.Model(inputs=inp, outputs=output)
 

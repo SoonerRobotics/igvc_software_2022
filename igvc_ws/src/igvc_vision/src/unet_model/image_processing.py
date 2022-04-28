@@ -3,6 +3,30 @@ import os
 import numpy as np
 import re
 
+# Read a single PNG file
+def readPNG(filename, processing = None):
+    # Load the image using OpenCV into numpy array
+    image = cv2.imread(filename)
+
+    # Process image
+    if processing == 'in':
+
+        # Histogram equalization of HSV value channel
+        #image = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
+        #mage[:,:,2] = cv2.equalizeHist(image[:,:,2])
+        #image = cv2.cvtColor(image, cv2.COLOR_HSV2BGR)
+
+        image = cv2.transpose(image) / 255.0
+        image = cv2.resize(image, (256, 256))
+
+    if processing == 'out':
+        image = cv2.transpose(image) / 255.0
+        image = cv2.resize(image, (256, 256))
+
+        image = image[:,:,0]
+
+    return image
+
 def readVideo(image, processing = None):
     # Load the image using OpenCV into numpy array
 
@@ -10,10 +34,9 @@ def readVideo(image, processing = None):
     if processing == 'in':
 
         # Histogram equalization of HSV value channel
-        image = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
-        image[:,:,2] = cv2.equalizeHist(image[:,:,2])
-        image = cv2.cvtColor(image, cv2.COLOR_HSV2BGR)
-
+        #image = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
+        #image[:,:,2] = cv2.equalizeHist(image[:,:,2])
+        #image = cv2.cvtColor(image, cv2.COLOR_HSV2BGR)
         image = cv2.transpose(image) / 255.0
         image = cv2.resize(image, (256, 256))
 
@@ -45,28 +68,6 @@ def read_images_from_directory(directory, file_regexp, whitelist = None, process
         list_of_images = [readPNG(directory + "/" + f, processing) for f in files if re.search(file_regexp, f) and f in whitelist]
         file_names = [f for f in files if re.search(file_regexp, f) and f in whitelist]
 
+    print(list_of_images)
     return np.array(list_of_images, dtype=np.float32), file_names
 
-# Read a single PNG file
-def readPNG(filename, processing = None):
-    # Load the image using OpenCV into numpy array
-    image = cv2.imread(filename)
-
-    # Process image
-    if processing == 'in':
-
-        # Histogram equalization of HSV value channel
-        image = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
-        image[:,:,2] = cv2.equalizeHist(image[:,:,2])
-        image = cv2.cvtColor(image, cv2.COLOR_HSV2BGR)
-
-        image = cv2.transpose(image) / 255.0
-        image = cv2.resize(image, (256, 256))
-
-    if processing == 'out':
-        image = cv2.transpose(image) / 255.0
-        image = cv2.resize(image, (256, 256))
-
-        image = image[:,:,0]
-
-    return image

@@ -34,7 +34,7 @@ def unet():
 
     # Post convolution layers
     output = layers.Conv2DTranspose(1, (1, 1), strides=(1,1), padding='same', activation='sigmoid')(up3)
-
+    #output = up3
     model = models.Model(inputs=inp, outputs=output)
 
     # Bind the optimizer and the loss function to the model

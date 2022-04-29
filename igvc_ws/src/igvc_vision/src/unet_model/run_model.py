@@ -16,13 +16,15 @@ ins = []
 count = 0
 while ret:
     ret, img = cam.read()
+    cv2.imwrite(f"./example/video_in/f{count:04}.png", cv2.resize(img, (1024, 576)))
+    img = readVideo(img, processing='in')
+    
     ##cv2.imshow('before',img)
     if not ret:
             break
     #cv2.imshow('before', img)
     
-    img = readVideo(img, processing='in')
-    cv2.imwrite(f"./example/video_in/f{count:04}.png", img * 255)
+
     count = count + 1
     ins.append(img)
 cam.release()
@@ -41,7 +43,7 @@ out = cv2.VideoWriter('outpy.avi',cv2.VideoWriter_fourcc('M','J','P','G'), 30, (
 
 for i, prediction in enumerate(predictions):
     # Post process predictions to make images we can use
-    prediction = post_process(prediction, threshold=0.4)
+    prediction = post_process(prediction, threshold=0.5)
     #print(prediction)
     #out.write(prediction)
     cv2.imwrite(f"./example/video_prediction/f{i:04}.png", prediction)

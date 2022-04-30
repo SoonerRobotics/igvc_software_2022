@@ -1,9 +1,11 @@
 #!/usr/bin/env python3
 
 import rospy
+from enum import Enum
 from igvc_msgs.msg import EKFState, velocity, gps
 from nav_msgs.msg import OccupancyGrid, Path
 from sensor_msgs.msg import Imu
+from std_msgs.msg import Int16
 from tf import transformations
 
 import sys
@@ -17,6 +19,11 @@ from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg
 from matplotlib.figure import Figure
 
 app = None
+
+class SystemState(Enum):
+    DISABLED = 0
+    MANUAL = 1
+    AUTONOMOUS = 2
 
 class IGVCPathCanvas(FigureCanvasQTAgg):
     def __init__(self, parent=None, width=5, height=4, dpi=100):
@@ -47,30 +54,30 @@ class IGVCWindow(QMainWindow):
         self.path_canvas = IGVCPathCanvas(self, width=4, height=4, dpi=120)
         self.hlayout.addWidget(self.path_canvas)
 
+        self.system_state_label = QLabel(self)
+        self.system_state_label.setText(f"System State: DISABLED")
+        self.system_state_label.setFont(QFont('Arial', 32))
+
         self.speed_label = QLabel(self)
         self.speed_label.setText(f"Speed: {0:0.01f}mph")
-        self.speed_label.setFont(QFont('Arial', 28))
+        self.speed_label.setFont(QFont('Arial', 32))
 
         self.wheels_label = QLabel(self)
         self.wheels_label.setText(f"Wheels: Waiting...")
-        self.wheels_label.setFont(QFont('Arial', 18))
+        self.wheels_label.setFont(QFont('Arial', 24))
 
         self.pose_label = QLabel(self)
         self.pose_label.setText(f"Pose: Waiting...")
-        self.pose_label.setFont(QFont('Arial', 18))
-
-        self.imu_label = QLabel(self)
-        self.imu_label.setText(f"IMU: Waiting...")
-        self.imu_label.setFont(QFont('Arial', 18))
+        self.pose_label.setFont(QFont('Arial', 24))
 
         self.gps_label = QLabel(self)
         self.gps_label.setText(f"GPS: Waiting...")
-        self.gps_label.setFont(QFont('Arial', 18))
+        self.gps_label.setFont(QFont('Arial', 24))
 
+        self.vlayout.addWidget(self.system_state_label)
         self.vlayout.addWidget(self.speed_label)
         self.vlayout.addWidget(self.wheels_label)
         self.vlayout.addWidget(self.pose_label)
-        self.vlayout.addWidget(self.imu_label)
         self.vlayout.addWidget(self.gps_label)
 
         self.setCentralWidget(self.centralWidget)
@@ -94,7 +101,7 @@ class IGVCWindow(QMainWindow):
         rospy.Subscriber("/igvc/local_path", Path, self.path_callback)
         rospy.Subscriber("/igvc/velocity", velocity, self.velocity_callback)
         rospy.Subscriber("/igvc/gps", gps, self.gps_callback)
-        rospy.Subscriber("/imu", Imu, self.imu_callback)
+        rospy.Subscriber("/igvc/system_state", Int16, self.system_state_callback)
 
     def draw(self):
         if self.curMap and self.lastEKF and self.path:
@@ -128,21 +135,13 @@ class IGVCWindow(QMainWindow):
             # Cleanup with ROS is done
             app.quit()
 
+    def system_state_callback(self, data):
+        self.system_state = SystemState(data.data)
+        self.system_state_label.setText(f"System State: {self.system_state.name}")
+
     def velocity_callback(self, data):
         self.wheels_label.setText(f"Wheels: {data.leftVel:0.01f}m/s, {data.rightVel:0.01f}m/s")
         self.speed_label.setText(f"Speedometer: {(data.leftVel + data.rightVel) * 1.119:0.01f}mph")
-
-    def imu_callback(self, imu_msg):
-        orientation = imu_msg.orientation
-        quaternion = (
-            orientation.x,
-            orientation.y,
-            orientation.z,
-            orientation.w)
-        yaw_rads = transformations.euler_from_quaternion(quaternion)[2]
-        yaw_rate = imu_msg.angular_velocity.z
-
-        self.imu_label.setText(f"IMU: ({yaw_rads * 180 / 3.14:0.01f}°,{yaw_rate * 180 / 3.14:0.01f}°/s)")
 
     def gps_callback(self, data):
         if data.hasSignal:

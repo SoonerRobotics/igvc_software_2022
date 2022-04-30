@@ -4,15 +4,27 @@
 
 import rospy
 import json
+from enum import Enum
 from igvc_msgs.msg import motors
 from sensor_msgs.msg import Joy
+from std_msgs.msg import Int16
 
+class SystemState(Enum):
+    DISABLED = 0
+    MANUAL = 1
+    AUTONOMOUS = 2
+
+system_state = SystemState.DISABLED
 
 manual_control_pub = rospy.Publisher("/igvc/motors_raw", motors, queue_size=10)
 
 max_speed = 1.4
 
 def clamp(n, smallest, largest): return max(smallest, min(n, largest))
+
+def system_state_callback(data):
+    global system_state
+    system_state = SystemState(data.data)
 
 def manual_control_callback(data):
     #http://wiki.ros.org/joy#Microsoft_Xbox_360_Wireless_Controller_for_Linux
@@ -53,12 +65,16 @@ def manual_control_callback(data):
     #     drivetrain_msg.right = axes[4] * 1.4
 
     # rospy.loginfo("manual_control callback.")
-    manual_control_pub.publish(drivetrain_msg)
+
+    if system_state == SystemState.MANUAL:
+        manual_control_pub.publish(drivetrain_msg)
 
 def manual_node():
     rospy.init_node('manual_node', anonymous=True)
 
     rospy.Subscriber("/joy", Joy, manual_control_callback)
+    rospy.Subscriber("/igvc/system_state", Int16, system_state_callback)
+
     rospy.spin()
 
 if __name__ == '__main__':

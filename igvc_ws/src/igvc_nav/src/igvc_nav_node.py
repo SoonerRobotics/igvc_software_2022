@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+from tkinter import DISABLED
 import rospy
 import math
 import tf
@@ -7,6 +8,15 @@ from pure_pursuit import PurePursuit
 from nav_msgs.msg import Path, Odometry
 from igvc_msgs.msg import motors, EKFState, velocity
 from utilities.pp_viwer import setup_pyplot, draw_pp
+from enum import Enum
+from std_msgs.msg import Int16
+
+class SystemState(Enum):
+    DISABLED = 0
+    MANUAL = 1
+    AUTONOMOUS = 2
+
+system_state = SystemState.DISABLED
 
 SHOW_PLOTS = False
 USE_SIM_TRUTH = False
@@ -18,6 +28,10 @@ mspeed = None
 publy = rospy.Publisher('/igvc/motors_raw', motors, queue_size=1)
 
 pp = PurePursuit()
+
+def system_state_callback(data):
+    global system_state
+    system_state = SystemState(data.data)
 
 def ekf_update(ekf_state):
     global pos, heading, ekf
@@ -82,6 +96,10 @@ def timer_callback(event):
     if SHOW_PLOTS:
         draw_pp(cur_pos, lookahead, pp.path)
 
+    motor_pkt = motors()
+    motor_pkt.left = 0
+    motor_pkt.right = 0
+
     if lookahead is not None and mspeed is not None and ((lookahead[1] - cur_pos[1]) ** 2 + (lookahead[0] - cur_pos[0]) ** 2) > 0.1:
         # Get heading to to lookahead from current position
         heading_to_lookahead = math.degrees(math.atan2(lookahead[1] - cur_pos[1], lookahead[0] - cur_pos[0]))
@@ -105,29 +123,20 @@ def timer_callback(event):
         # Define wheel linear velocities
         # Add proprtional error for turning.
         # TODO: PID instead of just P
-        motor_pkt = motors()
         motor_pkt.left = (forward_speed - clamp(0.3 * error, -0.2, 0.2))
         motor_pkt.right = (forward_speed + clamp(0.3 * error, -0.2, 0.2))
 
-        if motor_pkt.left < mspeed[0] - 0.1:
-            motor_pkt.left = mspeed[0] - 0.1
-
-        if motor_pkt.left > mspeed[0] + 0.1:
-            motor_pkt.left = mspeed[0] + 0.1
-
-        if motor_pkt.right < mspeed[1] - 0.1:
-            motor_pkt.right = mspeed[1] - 0.1
-
-        if motor_pkt.right > mspeed[1] + 0.1:
-            motor_pkt.right = mspeed[1] + 0.1
-
-        publy.publish(motor_pkt)
     else:
         # We couldn't find a suitable direction to head, stop the robot.
-        motor_pkt = motors()
         motor_pkt.left = -0.25
         motor_pkt.right = -0.25
 
+    if system_state == SystemState.AUTONOMOUS:
+        publy.publish(motor_pkt)
+    elif system_state == SystemState.DISABLED:
+        # Nav node will be in charge of stopping the robot during DISABLE
+        motor_pkt.left = 0
+        motor_pkt.right = 0
         publy.publish(motor_pkt)
 
 
@@ -141,6 +150,7 @@ def nav():
 
     rospy.Subscriber("/igvc/global_path", Path, global_path_update)
     rospy.Subscriber("/igvc/velocity", velocity, velocity_callback)
+    rospy.Subscriber("/igvc/system_state", Int16, system_state_callback)
 
     rospy.Timer(rospy.Duration(0.05), timer_callback)
 

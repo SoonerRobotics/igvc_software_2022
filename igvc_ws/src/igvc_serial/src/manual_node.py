@@ -30,19 +30,15 @@ def manual_control_callback(data):
     #http://wiki.ros.org/joy#Microsoft_Xbox_360_Wireless_Controller_for_Linux
 
     axes = data.axes
-
     drivetrain_msg = motors()
 
     # RT
-    if abs(axes[5]) < 0.05:
-        throttle = 0
-    else:
+    if abs(axes[5]) > 0.05 or abs(axes[2]) > 0.05:
         throttle = (1 - axes[5]) * max_speed * 0.8
-
-    # LT
-    if abs(axes[2]) > 0.05:
-        throttle = -(1 - axes[2]) * max_speed * 0.8
-
+        throttle = throttle - (1 - axes[2]) * max_speed * 0.8
+    else:
+        throttle = 0
+    
     if abs(axes[0]) > 0.15:
         turning = axes[0] * max_speed
     else:
@@ -52,7 +48,7 @@ def manual_control_callback(data):
     drivetrain_msg.right = clamp(throttle + turning * 0.6, -max_speed, max_speed)
 
     # Corrections
-    drivetrain_msg.right = -drivetrain_msg.right
+    #drivetrain_msg.right = -drivetrain_msg.right
     
     # if abs(axes[1]) < 0.1:
     #     drivetrain_msg.left = 0

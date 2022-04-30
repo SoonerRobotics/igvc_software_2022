@@ -7,9 +7,12 @@ import time
 from nav_msgs.msg import OccupancyGrid, MapMetaData
 from std_msgs.msg import Header
 from geometry_msgs.msg import Pose
-from sensor_msgs.msg import Image
+from sensor_msgs.msg import Image, CompressedImage
 
 import matplotlib.pyplot as plt
+
+from cv_bridge import CvBridge
+bridge = CvBridge()
 
 occupancy_grid_size = 200
 
@@ -105,9 +108,9 @@ transform = PerspectiveTransform(5)
 def grass_filter(og_image):
     img = cv2.cvtColor(og_image, cv2.COLOR_BGR2HSV)
     # create a lower bound for a pixel value
-    lower = np.array([0, 0, 100])
+    lower = np.array([0, 0, 50])
     # create an upper bound for a pixel values
-    upper = np.array([255, 80, 200])
+    upper = np.array([255, 80, 150])
     # detects all white pixels wihin the range specified earlier
     mask = cv2.inRange(img, lower, upper)
     mask = 255 - mask
@@ -121,12 +124,23 @@ def camera_callback(data):
 
     # start_time = time.time()
 
-    read_success, image = cam.read()
-    # print(f"read_success: {read_success}, read time: {(time.time() - start_time) * 1000:02.02f}ms")
+    print("new image!")
 
-    if not read_success:
-        print("cam read problem")
-        return
+    np_arr = np.fromstring(data.data, np.uint8)
+    image = cv2.imdecode(np_arr, cv2.IMREAD_COLOR)
+
+    plt.figure(4)
+    plt.clf()
+    plt.imshow(image)
+    plt.draw()
+    plt.pause(0.001)
+
+    # read_success, image = cam.read()
+    # # print(f"read_success: {read_success}, read time: {(time.time() - start_time) * 1000:02.02f}ms")
+
+    # if not read_success:
+    #     print("cam read problem")
+    #     return
 
     image = cv2.GaussianBlur(image, (7,7), 0)
     image = cv2.GaussianBlur(image, (7,7), 0)
@@ -140,7 +154,7 @@ def camera_callback(data):
     # used for non-hd video
     region_of_interest_vertices = [
         (0, height),
-        (width / 2, height / 2 + 70),
+        (width / 2, height / 2 + 20),
         (width, height),
     ]
 
@@ -158,17 +172,19 @@ def camera_callback(data):
     perspective_warp = transform.convert_to_flat(perpsective_crop)
 
     if imshowout == None:
-        imshowout = plt.imshow(perspective_warp)
-        plt.show(block=False)
-        plt.pause(0.001)
-    else:
-        imshowout.set_data(perspective_warp)
-        plt.show(block=False)
-        plt.pause(0.001)
+        plt.ion()
+        plt.show()
+        imshowout = 1
 
+    plt.figure(3)
+    plt.clf()
+    plt.imshow(cropped_image)
+    plt.draw()
+    plt.pause(0.001)
 
     # publishes to the node
     numpy_to_occupancyGrid(perspective_warp)
+    print("processed!")
     # print(f"CV time: {(end_time - start_time) * 1000:02.02f}ms")
 
 
@@ -218,13 +234,13 @@ if __name__ == '__main__':
     # call pipeline function which will return a data_map which is just a 2d numpy array
     # Need to subscribe to an image node for images data to use
     rospy.init_node('lane_finder', anonymous=True)
-    # rospy.Subscriber("/cv_camera/image_raw/compressed", CompressedImage, camera_callback)
+    rospy.Subscriber("/igvc/camera/compressed", CompressedImage, camera_callback)
     
     cam = cv2.VideoCapture(2, cv2.CAP_V4L2)
     cam.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
     cam.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
 
-    rospy.Timer(rospy.Duration(1.0/frame_rate), camera_callback)
+    # rospy.Timer(rospy.Duration(1.0/frame_rate), camera_callback)
 
 # while true loop
     rospy.spin()

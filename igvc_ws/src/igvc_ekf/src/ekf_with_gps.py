@@ -51,7 +51,7 @@ Q = None # process noise
 R = None # meas uncertainty
 
 initialized = False # init flag
-mobi_start = False # mobility start/stop flag
+mobi_start = True # mobility start/stop flag
 start_gps = None # starting GPS coords
 cur_gps = None # equiv GPS coords for our EKF position
 
@@ -172,7 +172,7 @@ def update():
 ## Run the KF
 def timer_callback(event):
     global cur_gps
-    if initialized:
+    if initialized and start_gps != None:
         predict()
         measure()
         update()
@@ -213,6 +213,10 @@ def calc_equiv_gps(x,y):
 def meas_gps(gps_msg):
     global Z_buffer, start_gps, R
     # we're treating this input as a direct measure of x and y
+    if start_gps == None:
+        start_gps = gps()
+        start_gps.latitude = gps_msg.latitude
+        start_gps.longitude = gps_msg.longitude
     if gps_msg.hasSignal:
         if not mobi_start:
             print(f"not mobi stop")

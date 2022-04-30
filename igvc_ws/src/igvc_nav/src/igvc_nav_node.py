@@ -8,7 +8,7 @@ from nav_msgs.msg import Path, Odometry
 from igvc_msgs.msg import motors, EKFState, velocity
 from utilities.pp_viwer import setup_pyplot, draw_pp
 
-SHOW_PLOTS = False
+SHOW_PLOTS = True
 USE_SIM_TRUTH = False
 
 pos = None
@@ -100,7 +100,7 @@ def timer_callback(event):
             error = 0
 
         # Base forward velocity for both wheels
-        forward_speed = 0.65 * (1 - abs(error))**3
+        forward_speed = 0.9 * (1 - abs(error))**3
 
         # Define wheel linear velocities
         # Add proprtional error for turning.
@@ -108,18 +108,6 @@ def timer_callback(event):
         motor_pkt = motors()
         motor_pkt.left = (forward_speed - clamp(0.3 * error, -0.2, 0.2))
         motor_pkt.right = (forward_speed + clamp(0.3 * error, -0.2, 0.2))
-
-        if motor_pkt.left < mspeed[0] - 0.1:
-            motor_pkt.left = mspeed[0] - 0.1
-
-        if motor_pkt.left > mspeed[0] + 0.1:
-            motor_pkt.left = mspeed[0] + 0.1
-
-        if motor_pkt.right < mspeed[1] - 0.1:
-            motor_pkt.right = mspeed[1] - 0.1
-
-        if motor_pkt.right > mspeed[1] + 0.1:
-            motor_pkt.right = mspeed[1] + 0.1
 
         publy.publish(motor_pkt)
     else:

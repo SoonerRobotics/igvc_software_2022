@@ -2,11 +2,13 @@
 
 bash common.sh
 
-# copy igvc to /etc/init.d/
-cp etc/igvc /etc/init.d/igvc
+# copy the service to the systemd directory
+cp etc/igvc.service /etc/systemd/system/
+cp etc/igvc_service.sh /usr/bin/
 
-# add to systemctl
-update-rc.d igvc defaults
+chmod +x /usr/bin/igvc_service.sh
+chmod 644 /etc/systemd/system/igvc.service
 
-# run the following to run code on startup
-#sstemctl enable igvc
+# run on boot
+# systemctl enable igvc
+echo "You can now run 'systemctl enable igvc' to enable the codebase on startup

@@ -157,14 +157,14 @@ def camera_callback(data):
     perpsective_crop = transform.trim_top_border(blurred)
     perspective_warp = transform.convert_to_flat(perpsective_crop)
 
-    if imshowout == None:
-        imshowout = plt.imshow(perspective_warp)
-        plt.show(block=False)
-        plt.pause(0.001)
-    else:
-        imshowout.set_data(perspective_warp)
-        plt.show(block=False)
-        plt.pause(0.001)
+    # if imshowout == None:
+    #     imshowout = plt.imshow(perspective_warp)
+    #     plt.show(block=False)
+    #     plt.pause(0.001)
+    # else:
+    #     imshowout.set_data(perspective_warp)
+    #     plt.show(block=False)
+    #     plt.pause(0.001)
 
 
     # publishes to the node
@@ -220,7 +220,7 @@ if __name__ == '__main__':
     rospy.init_node('lane_finder', anonymous=True)
     # rospy.Subscriber("/cv_camera/image_raw/compressed", CompressedImage, camera_callback)
     
-    cam = cv2.VideoCapture(2, cv2.CAP_V4L2)
+    cam = cv2.VideoCapture(0, cv2.CAP_V4L2)
     cam.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
     cam.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
 

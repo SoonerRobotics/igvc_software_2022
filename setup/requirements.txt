@@ -2,3 +2,4 @@ plotly
 rtree
 PyYAML
 pyserial
+python-can

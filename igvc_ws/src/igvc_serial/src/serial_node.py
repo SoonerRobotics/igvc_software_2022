@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 
+from turtle import left, right
 import rospy
+import csv
 import json
 import threading
 import serial
@@ -31,6 +33,10 @@ class VelocityCANReadThread(threading.Thread):
         threading.Thread.__init__(self)
 
         self.can_obj = can_obj
+        
+        # self.f = open("/home/zemlin/igvc_software_2021/igvc_ws/encoder_out.csv", "w")
+        
+        # self.csvwriter = csv.writer(self.f)
 
         # Allow timeout of up to 1 second on reads. This could be set to None to have infinite timeout,
         # but that would hault the node when it tries to exit. Need to make sure the while loop condition is
@@ -49,26 +55,30 @@ class VelocityCANReadThread(threading.Thread):
                 print("Received None CAN msg")
                 continue
 
-            if msg:
-                if msg.arbitration_id == CAN_ID_RECV_VELOCITY:
-                    left_speed, right_speed, max_speed = struct.unpack("bbB", msg.data)
-
-                    velPkt = velocity()
-                    velPkt.leftVel = left_speed / 127 * max_speed / 10
-                    velPkt.rightVel = -right_speed / 127 * max_speed / 10
-
-                    # print(f"Received {velPkt.leftVel} {velPkt.rightVel}")
-
-                    self.publisher.publish(velPkt)
+            if msg.arbitration_id == CAN_ID_RECV_VELOCITY:
+                left_speed, right_speed, max_speed = struct.unpack("bbB", msg.data)
                 
-                if msg.arbitration_id == CAN_ID_ESTOP or msg.arbitration_id == CAN_ID_MOBSTOP:
-                    # Stop blinking
-                    serials["gps"].write(b'n')
+                velPkt = velocity()
+                velPkt.leftVel = -right_speed / 127 * max_speed / 10
+                velPkt.rightVel = -left_speed / 127 * max_speed / 10
+                
+                # print(f"vel {velPkt.leftVel}, {velPkt.rightVel}")
+                
+                # self.csvwriter.writerow([rospy.Time.now(), velPkt.leftVel, velPkt.rightVel])
 
-                if msg.arbitration_id == CAN_ID_MOBSTART:
-                    # Start blinking
-                    serials["gps"].write(b'b')
-                    mob_publisher.publish(Bool(True))
+                self.publisher.publish(velPkt)
+            
+            if msg.arbitration_id == CAN_ID_ESTOP or msg.arbitration_id == CAN_ID_MOBSTOP:
+                # Stop blinking
+                # serials["gps"].write(b'n')
+                pass
+
+            if msg.arbitration_id == CAN_ID_MOBSTART:
+                # Start blinking
+                # serials["gps"].write(b'b')
+                mob_publisher.publish(Bool(True))
+                
+        self.f.close()
 
 
 class GPSSerialReadThread(threading.Thread):
@@ -116,12 +126,14 @@ def clamp(val, min, max):
 def motors_out(data):
 
     # Soon to be firmware corrections
-    data.right = -data.right
+    
 
-    left_speed = clamp(int(data.left / MAX_SPEED * 127), -128, 127)
-    right_speed = clamp(int(data.right / MAX_SPEED * 127), -128, 127)
+    left_speed = clamp(int(-data.right / MAX_SPEED * 127), -128, 127)
+    right_speed = clamp(int(-data.left / MAX_SPEED * 127), -128, 127)
 
     packed_data = struct.pack('bbB', left_speed, right_speed, int(MAX_SPEED * 10))
+    
+    # print(f"sending {left_speed}, {right_speed}, {int(MAX_SPEED * 10)}")
 
     can_msg = can.Message(arbitration_id=CAN_ID_SEND_VELOCITY, data=packed_data)
 
@@ -151,10 +163,10 @@ def init_serial_node():
     motor_response_thread.start()
 
     # Setup GPS serial and publisher
-    gps_serial = serials["gps"] = serial.Serial(port = '/dev/igvc-nucleo-722', baudrate = 9600)
+    # gps_serial = serials["gps"] = serial.Serial(port = '/dev/igvc-nucleo-722', baudrate = 9600)
 
-    gps_response_thread = GPSSerialReadThread(serial_obj = serials["gps"], topic = '/igvc/gps')
-    gps_response_thread.start()
+    # gps_response_thread = GPSSerialReadThread(serial_obj = serials["gps"], topic = '/igvc/gps')
+    # gps_response_thread.start()
     
     # Wait for topic updates
     rospy.spin()
@@ -162,7 +174,7 @@ def init_serial_node():
     # Close the serial ports when program ends
     print("Closing threads")
     motor_can.close()
-    gps_serial.close()
+    # gps_serial.close()
 
 if __name__ == '__main__':
     try:

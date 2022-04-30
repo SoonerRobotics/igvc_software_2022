@@ -9,6 +9,7 @@ from std_msgs.msg import Header
 from geometry_msgs.msg import Pose
 from sensor_msgs.msg import Image
 
+import matplotlib.pyplot as plt
 
 occupancy_grid_size = 200
 
@@ -20,7 +21,7 @@ height_offset = 58
 captured_width = 70
 captured_height = 50
 
-frame_rate = 14 # Hz
+frame_rate = 8.0 # Hz
 
 preview_pub = rospy.Publisher("/igvc/preview", Image, queue_size=1)
 image_pub = rospy.Publisher("/igvc/lane_map", OccupancyGrid, queue_size=1)
@@ -37,6 +38,7 @@ map_info.origin.position.x = -10
 map_info.origin.position.y = -10
 
 cam = None
+imshowout = None
 
 class PerspectiveTransform:
 
@@ -115,7 +117,7 @@ def grass_filter(og_image):
 
 # takes in an image and outputs an image that has redlines overlaying the detected boundries
 def camera_callback(data):
-    global img_num, start_time
+    global img_num, start_time, imshowout
 
     # start_time = time.time()
 
@@ -123,6 +125,7 @@ def camera_callback(data):
     # print(f"read_success: {read_success}, read time: {(time.time() - start_time) * 1000:02.02f}ms")
 
     if not read_success:
+        print("cam read problem")
         return
 
     image = cv2.GaussianBlur(image, (7,7), 0)
@@ -153,6 +156,16 @@ def camera_callback(data):
 
     perpsective_crop = transform.trim_top_border(blurred)
     perspective_warp = transform.convert_to_flat(perpsective_crop)
+
+    if imshowout == None:
+        imshowout = plt.imshow(perspective_warp)
+        plt.show(block=False)
+        plt.pause(0.001)
+    else:
+        imshowout.set_data(perspective_warp)
+        plt.show(block=False)
+        plt.pause(0.001)
+
 
     # publishes to the node
     numpy_to_occupancyGrid(perspective_warp)
@@ -207,7 +220,7 @@ if __name__ == '__main__':
     rospy.init_node('lane_finder', anonymous=True)
     # rospy.Subscriber("/cv_camera/image_raw/compressed", CompressedImage, camera_callback)
     
-    cam = cv2.VideoCapture(0)
+    cam = cv2.VideoCapture(2, cv2.CAP_V4L2)
     cam.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
     cam.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
 

@@ -1,8 +1,8 @@
-# igvc_software_2021
+# igvc_software_2022
 
-[![IGVC Weekly Compile Test](https://github.com/SoonerRobotics/igvc_software_2021/actions/workflows/igvc_compile_test.yml/badge.svg)](https://github.com/SoonerRobotics/igvc_software_2021/actions/workflows/igvc_compile_test.yml)
+[![IGVC Weekly Compile Test](https://github.com/SoonerRobotics/igvc_software_2022/actions/workflows/igvc_compile_test.yml/badge.svg)](https://github.com/SoonerRobotics/igvc_software_2022/actions/workflows/igvc_compile_test.yml)
 
-Software for the 2021 [Intelligent Ground Vehicle Competition](https://www.igvc.org/), Auto-Nav challenge.
+Software for the 2022 [Intelligent Ground Vehicle Competition](https://www.igvc.org/), Auto-Nav challenge.
 
 We are using [ROS Noetic](http://wiki.ros.org/noetic) and Ubuntu 20.04 for this project.
 

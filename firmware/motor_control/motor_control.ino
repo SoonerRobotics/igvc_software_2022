@@ -6,8 +6,9 @@ IntervalTimer mainTaskTimer;
 /*
 
 */
-//
-#define waitEstop 1
+// 1 = doesn't wait for mobility start signal
+// 0 = waits for mobility start signal.
+#define waitEstop 0
 
 const int ledPin = LED_BUILTIN;
 const int encoderLeftB = 6;
@@ -57,8 +58,8 @@ void setup() {
   digitalWrite(20, HIGH);
   robotStatus.eStop = 0;
   robotStatus.mStop = 1;
-
   robotStatus.mStart = 0;
+  
   #if waitEstop == 1
       robotStatus.mStop = 0;
       robotStatus.mStart = 1;

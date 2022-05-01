@@ -27,7 +27,7 @@ void setup() {
   pinMode(light2, OUTPUT);
   pinMode(light3, OUTPUT);
   pinMode(light4, OUTPUT);
-  pinMode(estop_sig, OUTPUT);
+  //pinMode(estop_sig, OUTPUT);
 
   Serial.begin(9600);
   mainTaskTimer.begin(set_ms_flags, 1000); // calls this function every 1ms
@@ -49,7 +49,7 @@ void setup() {
   robotStatus.mStop = 1;
   robotStatus.mStart = 0;
 
-  digitalWrite(estop_sig, HIGH);
+  //digitalWrite(estop_sig, HIGH);
 
 }
 

@@ -1,13 +1,14 @@
 [Unit]
 Description=IGVC22 Service
-After=graphical.target
 
 [Service]
 Type=simple
 User=igvc
-ExecStart=/bin/bash /usr/bin/igvc_service.sh
 Restart=always
 RestartSec=5s
+Environment="DISPLAY=:0"
+Environment="XAUTHORITY=/home/igvc/.Xauthority"
+ExecStart=/bin/bash /usr/bin/igvc_service.sh
 
 [Install]
 WantedBy=multi-user.target

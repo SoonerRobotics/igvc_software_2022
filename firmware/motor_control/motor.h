@@ -11,7 +11,7 @@
 #define PULSES_PER_REV (600 * 7 * 2) // (revs)
 //#define LINEAR_PER_REV 0.2054f // Wheel radius (m) old
 #define LINEAR_PER_REV 0.2032f // Wheel radius (m)
-#define MILLIS_TO_FULL 80 // Milliseconds to go from 0 output speed to 1
+#define MILLIS_TO_FULL 250 // Milliseconds to go from 0 output speed to 1
 #define LPIIR_DECAY 0.1f // Decay rate of low pass filter on velocity
 
 #define PI 3.14159265f

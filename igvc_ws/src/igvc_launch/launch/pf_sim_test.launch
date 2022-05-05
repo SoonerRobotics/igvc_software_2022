@@ -1,0 +1,8 @@
+<launch>
+    <!-- Run the simulator and all the transforms -->
+    <include file="$(find igvc_launch)/launch/config/igvc_sim_config.launch" />
+
+    <!-- EKF -->
+    <include file="$(find igvc_pf)/launch/igvc_pf.launch" />
+    
+</launch>

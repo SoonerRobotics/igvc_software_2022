@@ -59,6 +59,7 @@ add_message_files(
   imuodom.msg
   EKFConvergence.msg
   path.msg
+  deltaodom.msg
 )
 
 ## Generate services in the 'srv' folder

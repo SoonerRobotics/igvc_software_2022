@@ -25,14 +25,14 @@ metadata = MapMetaData(map_load_time = rospy.Time(), resolution=0.1,
 header = Header()
 header.frame_id = "map"
 
-max_range = 5
+max_range = 8
 xxxs = list(range(-max_range, max_range + 1))
 circle_around_indicies = []
 for x in xxxs:
     for y in xxxs:
         if math.sqrt(x**2 + y**2) < max_range:
             circle_around_indicies.append((x, y, math.sqrt(x**2 + y**2)))
-no_go_range = 2
+no_go_range = 4
 
 # Initializiation
 last_lidar = None

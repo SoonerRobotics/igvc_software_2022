@@ -2,10 +2,10 @@
 
 import rospy
 from enum import Enum
-from igvc_msgs.msg import EKFState, velocity, gps
+from igvc_msgs.msg import EKFState, velocity, gps, deltaodom
 from nav_msgs.msg import OccupancyGrid, Path
 from sensor_msgs.msg import Imu
-from std_msgs.msg import Int16
+from std_msgs.msg import Int16, Bool
 from tf import transformations
 
 import sys
@@ -55,12 +55,16 @@ class IGVCWindow(QMainWindow):
         self.hlayout.addWidget(self.path_canvas)
 
         self.system_state_label = QLabel(self)
-        self.system_state_label.setText(f"System State: DISABLED")
+        self.system_state_label.setText(f"System State: {'DISABLED'}, MobilityStart: {True}")
         self.system_state_label.setFont(QFont('Arial', 32))
 
         self.speed_label = QLabel(self)
         self.speed_label.setText(f"Speed: {0:0.01f}mph")
         self.speed_label.setFont(QFont('Arial', 32))
+
+        self.dead_rekt_label = QLabel(self)
+        self.dead_rekt_label.setText(f"Dead rekt: Waiting...")
+        self.dead_rekt_label.setFont(QFont('Arial', 32))
 
         self.wheels_label = QLabel(self)
         self.wheels_label.setText(f"Wheels: Waiting...")
@@ -76,6 +80,7 @@ class IGVCWindow(QMainWindow):
 
         self.vlayout.addWidget(self.system_state_label)
         self.vlayout.addWidget(self.speed_label)
+        self.vlayout.addWidget(self.dead_rekt_label)
         self.vlayout.addWidget(self.wheels_label)
         self.vlayout.addWidget(self.pose_label)
         self.vlayout.addWidget(self.gps_label)
@@ -92,6 +97,9 @@ class IGVCWindow(QMainWindow):
         self.lastEKF = None
         self.ekfAtMap = None
         self.path = None
+        self.system_state = SystemState.DISABLED
+        self.mobi_start = False
+        self.dead_rekt_cum = (0,0,0)
 
         # self.cam = cv2.VideoCapture(0)
 
@@ -100,8 +108,10 @@ class IGVCWindow(QMainWindow):
         rospy.Subscriber("/igvc/state", EKFState, self.ekf_callback)
         rospy.Subscriber("/igvc/local_path", Path, self.path_callback)
         rospy.Subscriber("/igvc/velocity", velocity, self.velocity_callback)
+        rospy.Subscriber("/igvc/deltaodom", deltaodom, self.deltaodom_callback)
         rospy.Subscriber("/igvc/gps", gps, self.gps_callback)
         rospy.Subscriber("/igvc/system_state", Int16, self.system_state_callback)
+        rospy.Subscriber("/igvc/mobstart", Bool, self.mobi_start_callback)
 
     def draw(self):
         if self.curMap and self.lastEKF and self.path:
@@ -135,9 +145,20 @@ class IGVCWindow(QMainWindow):
             # Cleanup with ROS is done
             app.quit()
 
+    def mobi_start_callback(self, data):
+        self.mobi_start = data.data
+        self.system_state_label.setText(f"System State: {self.system_state.name}, MobilityStart: {self.mobi_start}")
+
+    def deltaodom_callback(self, data:deltaodom):
+        self.dead_rekt_cum = (self.dead_rekt_cum[0] + data.delta_x, self.dead_rekt_cum[1] + data.delta_y, self.dead_rekt_cum[2] + data.delta_theta)
+        self.dead_rekt_label.setText(f"Dead rekt: {self.dead_rekt_cum}")
+
     def system_state_callback(self, data):
         self.system_state = SystemState(data.data)
-        self.system_state_label.setText(f"System State: {self.system_state.name}")
+        self.system_state_label.setText(f"System State: {self.system_state.name}, MobilityStart: {self.mobi_start}")
+
+        if self.system_state == SystemState.DISABLED:
+            self.dead_rekt_cum = (0, 0, 0)
 
     def velocity_callback(self, data):
         self.wheels_label.setText(f"Wheels: {data.leftVel:0.01f}m/s, {data.rightVel:0.01f}m/s")

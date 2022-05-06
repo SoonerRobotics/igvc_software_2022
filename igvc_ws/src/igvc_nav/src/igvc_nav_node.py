@@ -6,7 +6,7 @@ import tf
 from geometry_msgs.msg import Pose
 from pure_pursuit import PurePursuit
 from nav_msgs.msg import Path, Odometry
-from igvc_msgs.msg import motors, EKFState, velocity
+from igvc_msgs.msg import motors, EKFState
 from utilities.pp_viwer import setup_pyplot, draw_pp
 from enum import Enum
 from std_msgs.msg import Int16
@@ -24,7 +24,7 @@ USE_SIM_TRUTH = False
 pos = None
 heading = None
 ekf = None
-mspeed = None
+odom = None
 publy = rospy.Publisher('/igvc/motors_raw', motors, queue_size=1)
 
 pp = PurePursuit()
@@ -59,10 +59,6 @@ def true_pose_callback(data):
 
     if heading < 0:
         heading += 360
-
-def velocity_callback(data):
-    global mspeed
-    mspeed = (data.leftVel, data.rightVel)
 
 def global_path_update(data):
     points = [x.pose.position for x in data.poses] # Get points from Path
@@ -100,7 +96,7 @@ def timer_callback(event):
     motor_pkt.left = 0
     motor_pkt.right = 0
 
-    if lookahead is not None and mspeed is not None and ((lookahead[1] - cur_pos[1]) ** 2 + (lookahead[0] - cur_pos[0]) ** 2) > 0.1:
+    if lookahead is not None and ((lookahead[1] - cur_pos[1]) ** 2 + (lookahead[0] - cur_pos[0]) ** 2) > 0.1:
         # Get heading to to lookahead from current position
         heading_to_lookahead = math.degrees(math.atan2(lookahead[1] - cur_pos[1], lookahead[0] - cur_pos[0]))
         if heading_to_lookahead < 0:
@@ -118,7 +114,7 @@ def timer_callback(event):
             error = 0
 
         # Base forward velocity for both wheels
-        forward_speed = 0.65 * (1 - abs(error))**3
+        forward_speed = 0.5 * (1 - abs(error))**3
 
         # Define wheel linear velocities
         # Add proprtional error for turning.
@@ -149,7 +145,6 @@ def nav():
         rospy.Subscriber("/igvc/state", EKFState, ekf_update)
 
     rospy.Subscriber("/igvc/global_path", Path, global_path_update)
-    rospy.Subscriber("/igvc/velocity", velocity, velocity_callback)
     rospy.Subscriber("/igvc/system_state", Int16, system_state_callback)
 
     rospy.Timer(rospy.Duration(0.05), timer_callback)

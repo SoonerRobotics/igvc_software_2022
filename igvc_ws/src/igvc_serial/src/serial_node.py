@@ -2,15 +2,14 @@
 
 from turtle import left, right
 import rospy
-import csv
 import json
 import threading
-import serial
 import can
 import struct
+import datetime
 
 from std_msgs.msg import String, Bool
-from igvc_msgs.msg import motors, velocity, gps
+from igvc_msgs.msg import motors, velocity, gps, deltaodom
 
 # ROS node that facilitates all serial communications within the robot
 # Subscribes to motor values
@@ -27,9 +26,10 @@ CAN_ID_MOBSTOP = 1
 CAN_ID_MOBSTART = 9
 CAN_ID_SEND_VELOCITY = 10
 CAN_ID_RECV_VELOCITY = 11
+CAN_ID_ODOM_FEEDBACK = 14
 
 class VelocityCANReadThread(threading.Thread):
-    def __init__(self, can_obj, topic):
+    def __init__(self, can_obj):
         threading.Thread.__init__(self)
 
         self.can_obj = can_obj
@@ -45,7 +45,8 @@ class VelocityCANReadThread(threading.Thread):
         # self.can_obj.timeout = 1
 
         # Assumes String type for now. This class will need to be adapted in the future for different message types.
-        self.publisher = rospy.Publisher(topic, velocity, queue_size=1)
+        self.vel_publisher = rospy.Publisher("/igvc/velocity", velocity, queue_size=1)
+        self.odom_publisher = rospy.Publisher("/igvc/deltaodom", deltaodom, queue_size=1)
 
     def run(self):
         while not rospy.is_shutdown():
@@ -66,7 +67,25 @@ class VelocityCANReadThread(threading.Thread):
                 
                 # self.csvwriter.writerow([rospy.Time.now(), velPkt.leftVel, velPkt.rightVel])
 
-                self.publisher.publish(velPkt)
+                self.vel_publisher.publish(velPkt)
+            
+            if msg.arbitration_id == CAN_ID_ODOM_FEEDBACK:
+                delta_theta, delta_y, delta_x = struct.unpack("hhh", msg.data)
+                
+                # velPkt = velocity()
+                # velPkt.leftVel = -right_speed / 127 * max_speed / 10
+                # velPkt.rightVel = -left_speed / 127 * max_speed / 10
+
+                odom_pkt = deltaodom()
+                odom_pkt.delta_x = delta_x * 0.0001
+                odom_pkt.delta_y = delta_y * 0.0001
+                odom_pkt.delta_theta = delta_theta * 0.0001
+                
+                print(f"odom: ({delta_x:0.03f},{delta_y:0.03f},{delta_theta:0.03f})")
+                
+                # self.csvwriter.writerow([rospy.Time.now(), velPkt.leftVel, velPkt.rightVel])
+
+                self.odom_publisher.publish(odom_pkt)
             
             if msg.arbitration_id == CAN_ID_ESTOP or msg.arbitration_id == CAN_ID_MOBSTOP:
                 # Stop blinking
@@ -78,7 +97,7 @@ class VelocityCANReadThread(threading.Thread):
                 # serials["gps"].write(b'b')
                 mob_publisher.publish(Bool(True))
                 
-        self.f.close()
+        # self.f.close()
 
 
 class GPSSerialReadThread(threading.Thread):
@@ -146,6 +165,19 @@ def motors_out(data):
 
     # print(f"Sent {data.left} {data.right}")
 
+def mobstart_callback(data: Bool):
+    can_msg = can.Message(arbitration_id=CAN_ID_MOBSTOP)
+
+    print(f"Sending mobstart with value {data.data}")
+
+    if data.data == True:
+        can_msg = can.Message(arbitration_id=CAN_ID_MOBSTART)
+
+    try:
+        cans["motor"].send(can_msg)
+    except:
+        print("Could not send CAN message")
+
 
 # Initialize the serial node
 # Node handles all serial communication within the robot (motor, GPS)
@@ -159,8 +191,10 @@ def init_serial_node():
     motor_can = cans["motor"] = can.ThreadSafeBus(bustype='slcan', channel='/dev/igvc-can-835', bitrate=100000)
     rospy.Subscriber('/igvc/motors_raw', motors, motors_out)
     
-    motor_response_thread = VelocityCANReadThread(can_obj = cans["motor"], topic = '/igvc/velocity')
+    motor_response_thread = VelocityCANReadThread(can_obj = cans["motor"])
     motor_response_thread.start()
+
+    rospy.Subscriber("/igvc/mobstart", Bool, mobstart_callback)
 
     # Setup GPS serial and publisher
     # gps_serial = serials["gps"] = serial.Serial(port = '/dev/igvc-nucleo-722', baudrate = 9600)

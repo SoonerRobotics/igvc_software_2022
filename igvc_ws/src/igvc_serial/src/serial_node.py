@@ -7,6 +7,7 @@ import threading
 import can
 import struct
 import datetime
+import sys
 
 from std_msgs.msg import String, Bool
 from igvc_msgs.msg import motors, velocity, gps, deltaodom
@@ -14,6 +15,8 @@ from igvc_msgs.msg import motors, velocity, gps, deltaodom
 # ROS node that facilitates all serial communications within the robot
 # Subscribes to motor values
 # Publishes GPS coordinates
+
+sys.stdout.reconfigure(line_buffering=True)
 
 serials = {}
 cans = {}
@@ -56,6 +59,9 @@ class VelocityCANReadThread(threading.Thread):
                 print("Received None CAN msg")
                 continue
 
+            # if msg.arbitration_id != CAN_ID_RECV_VELOCITY and msg.arbitration_id != CAN_ID_ODOM_FEEDBACK:
+            #     print(f"Got CAN: {msg.arbitration_id}")
+
             if msg.arbitration_id == CAN_ID_RECV_VELOCITY:
                 left_speed, right_speed, max_speed = struct.unpack("bbB", msg.data)
                 
@@ -81,7 +87,7 @@ class VelocityCANReadThread(threading.Thread):
                 odom_pkt.delta_y = delta_y * 0.0001
                 odom_pkt.delta_theta = 2 * delta_theta * 0.0001
                 
-                print(f"odom: ({delta_x:0.03f},{delta_y:0.03f},{delta_theta:0.03f})")
+                # print(f"odom: ({delta_x:0.03f},{delta_y:0.03f},{delta_theta:0.03f})")
                 
                 # self.csvwriter.writerow([rospy.Time.now(), velPkt.leftVel, velPkt.rightVel])
 
@@ -89,11 +95,13 @@ class VelocityCANReadThread(threading.Thread):
             
             if msg.arbitration_id == CAN_ID_ESTOP or msg.arbitration_id == CAN_ID_MOBSTOP:
                 # Stop blinking
+                print(f"Received Stop {msg.arbitration_id}")
                 # serials["gps"].write(b'n')
                 mob_publisher.publish(Bool(False))
 
             if msg.arbitration_id == CAN_ID_MOBSTART:
                 # Start blinking
+                print(f"Received Start {msg.arbitration_id}")
                 # serials["gps"].write(b'b')
                 mob_publisher.publish(Bool(True))
                 
@@ -185,6 +193,8 @@ def init_serial_node():
     
     # Setup serial node
     rospy.init_node("serial_node", anonymous = False)
+
+    print("Serial opened!")
 
     # Setup motor serial and subscriber
     # motor_serial = serials["motor"] = serial.Serial(port = '/dev/igvc-nucleo-120', baudrate = 115200)

@@ -6,10 +6,6 @@ from enum import Enum
 from sensor_msgs.msg import Joy
 from std_msgs.msg import Int16, Bool
 
-from pygame import mixer
-
-mixer.init()
-
 class SystemState(Enum):
     DISABLED = 0
     MANUAL = 1
@@ -25,15 +21,11 @@ class SystemManager:
 
         rospy.Subscriber("/joy", Joy, self.joy_callback)
 
-        mixer.music.load('/home/igvc/music/genki_dama.wav')
-
     def publish_state(self):
         self.state_publisher.publish(Int16(self.current_state.value))
 
-        mixer.music.stop()
-
-        if self.current_state == SystemState.DISABLED or self.current_state == SystemState.AUTONOMOUS:
-            self.mobi_start_publisher.publish(Bool(False))
+        # Mobility stop on any state transition
+        self.mobi_start_publisher.publish(Bool(False))
 
     def joy_callback(self, data):
         if self.previous_joy == None:
@@ -53,9 +45,6 @@ class SystemManager:
             if self.current_state != SystemState.DISABLED:
                 # Send Mobi Start
                 self.mobi_start_publisher.publish(Bool(True))
-            
-            if self.current_state == SystemState.AUTONOMOUS:
-                mixer.music.play()
 
         # B button = Kill ROS
         if self.previous_joy.buttons[1] == 0 and data.buttons[1] == 1:

@@ -19,6 +19,11 @@ import numpy as np
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg
 from matplotlib.figure import Figure
 
+from pygame import mixer
+
+mixer.init()
+
+
 app = None
 
 class SystemState(Enum):
@@ -104,6 +109,9 @@ class IGVCWindow(QMainWindow):
 
         # self.cam = cv2.VideoCapture(0)
 
+        # Setup Music
+        mixer.music.load('/home/igvc/music/genki_dama.wav')
+
         # Subscribe to necessary topics
         rospy.Subscriber("/igvc_slam/local_config_space", OccupancyGrid, self.c_space_callback, queue_size=1)
         rospy.Subscriber("/igvc/state", EKFState, self.ekf_callback)
@@ -149,6 +157,12 @@ class IGVCWindow(QMainWindow):
     def mobi_start_callback(self, data):
         self.mobi_start = data.data
         self.system_state_label.setText(f"System State: {self.system_state.name}, MobilityStart: {self.mobi_start}")
+
+        if data.data == True and self.system_state == SystemState.AUTONOMOUS:
+            mixer.music.play()
+
+        if data.data == False:
+            mixer.music.stop()
 
     def deltaodom_callback(self, data:deltaodom):
         x = self.dead_rekt_cum[0]

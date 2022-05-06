@@ -259,12 +259,18 @@ def meas_imu(imu_msg):
     
 def meas_deltaodom(data:deltaodom):
     global odom, dead_cum
-    odom = data
-    dead_cum = (dead_cum[0] + data.delta_x, dead_cum[1] + data.delta_y, dead_cum[2] + data.delta_theta,)
+
+    x = dead_cum[0]
+    y = dead_cum[1]
+    theta = dead_cum[2]
+    dead_cum = (x + data.delta_x * cos(theta) + data.delta_y * sin(theta), y + data.delta_x * sin(theta) + data.delta_y * cos(theta), theta + data.delta_theta)
 
 def init_mobi_start(mobi_msg):
-    global mobi_start
-    mobi_start = True
+    global mobi_start, dead_cum
+    mobi_start = mobi_msg.data
+
+    if not mobi_start:
+        dead_cum = (0,0,0)
 
 def main():
     global state_pub

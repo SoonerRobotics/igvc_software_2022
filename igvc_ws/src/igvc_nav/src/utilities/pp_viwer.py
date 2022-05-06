@@ -6,7 +6,7 @@ def setup_pyplot():
     plt.show()
 
 # Draws pure pursuit information to pyplot
-def draw_pp(agent_pos, lookahead_pos, waypoints, xlims=[-10,10], ylims=[-10,10], fig_num=1):
+def draw_pp(agent_pos, lookahead_pos, waypoints, xlims=[-1,2], ylims=[-2,1], fig_num=1):
     plt.figure(fig_num)
     plt.clf()
     plt.xlim([agent_pos[0] + xlims[0], agent_pos[0] + xlims[1]])

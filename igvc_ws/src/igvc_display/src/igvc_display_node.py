@@ -7,6 +7,7 @@ from nav_msgs.msg import OccupancyGrid, Path
 from sensor_msgs.msg import Imu
 from std_msgs.msg import Int16, Bool
 from tf import transformations
+from math import sin, cos
 
 import sys
 import PyQt5 as Qt
@@ -150,8 +151,11 @@ class IGVCWindow(QMainWindow):
         self.system_state_label.setText(f"System State: {self.system_state.name}, MobilityStart: {self.mobi_start}")
 
     def deltaodom_callback(self, data:deltaodom):
-        self.dead_rekt_cum = (self.dead_rekt_cum[0] + data.delta_x, self.dead_rekt_cum[1] + data.delta_y, self.dead_rekt_cum[2] + data.delta_theta)
-        self.dead_rekt_label.setText(f"Dead rekt: {self.dead_rekt_cum}")
+        x = self.dead_rekt_cum[0]
+        y = self.dead_rekt_cum[1]
+        theta = self.dead_rekt_cum[2]
+        self.dead_rekt_cum = (x + data.delta_x * cos(theta) + data.delta_y * sin(theta), y + data.delta_x * sin(theta) + data.delta_y * cos(theta), theta + data.delta_theta)
+        self.dead_rekt_label.setText(f"Dead rekt: {self.dead_rekt_cum[0]:0.02f},{self.dead_rekt_cum[1]:0.02f},{self.dead_rekt_cum[2]:0.02f}")
 
     def system_state_callback(self, data):
         self.system_state = SystemState(data.data)

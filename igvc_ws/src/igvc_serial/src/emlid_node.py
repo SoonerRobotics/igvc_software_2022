@@ -21,7 +21,7 @@ def init_serial_node():
         line = emlid.readline().decode()
         msg = pynmea2.parse(line)
 
-        print(f"gps: {line}")
+        # print(f"gps: {line}")
         
         if isinstance(msg, pynmea2.GGA):
             gps_msg = gps()

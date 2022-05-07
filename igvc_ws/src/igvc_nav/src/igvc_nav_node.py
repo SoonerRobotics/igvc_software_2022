@@ -67,7 +67,13 @@ def global_path_update(data):
 
 def get_angle_diff(angle1, angle2):
     delta = angle1 - angle2
-    # delta = (delta + 2 * math.pi) % 2 * math.pi - math.pi
+
+    # Account for cases when angles are very close or far
+    if delta > math.pi:
+        delta -= 2 * math.pi
+    elif delta < 0:
+        delta += 2 * math.pi
+    
     return delta
 
 def clamp(val, min, max):

@@ -61,7 +61,7 @@ class IGVCWindow(QMainWindow):
         self.hlayout.addWidget(self.path_canvas)
 
         self.system_state_label = QLabel(self)
-        self.system_state_label.setText(f"System State: {'DISABLED'}, MobilityStart: {True}")
+        self.system_state_label.setText(f"System State: {'DISABLED'}, Mobility: {'Start'}")
         self.system_state_label.setFont(QFont('Arial', 32))
 
         self.speed_label = QLabel(self)
@@ -156,7 +156,7 @@ class IGVCWindow(QMainWindow):
 
     def mobi_start_callback(self, data):
         self.mobi_start = data.data
-        self.system_state_label.setText(f"System State: {self.system_state.name}, MobilityStart: {self.mobi_start}")
+        self.system_state_label.setText(f"System State: {self.system_state.name}, Mobility: {'Start' if self.mobi_start else 'Stop'}")
 
         if data.data == True and self.system_state == SystemState.AUTONOMOUS:
             mixer.music.play()
@@ -173,7 +173,7 @@ class IGVCWindow(QMainWindow):
 
     def system_state_callback(self, data):
         self.system_state = SystemState(data.data)
-        self.system_state_label.setText(f"System State: {self.system_state.name}, MobilityStart: {self.mobi_start}")
+        self.system_state_label.setText(f"System State: {self.system_state.name}, Mobility: {'Start' if self.mobi_start else 'Stop'}")
 
         if self.system_state == SystemState.DISABLED:
             self.dead_rekt_cum = (0, 0, 0)
@@ -190,11 +190,12 @@ class IGVCWindow(QMainWindow):
 
     def ekf_callback(self, data):
         self.lastEKF = data
-        self.pose_label.setText(f"Pose: {data.x:0.01f}m, {data.y:0.01f}m,{data.left_velocity:0.01f}m/s,{data.right_velocity:0.01f}m/s\n\t{data.yaw * 180/3.14:0.01f}°, {data.yaw_rate * 180 / 3.14:0.01f}°/s\n\t{data.latitude}, {data.longitude}")
+        self.pose_label.setText(f"Pose: {data.x:0.01f}m, {data.y:0.01f}m\n\t{data.yaw * 180/3.14:0.01f}°\n\t{data.latitude}, {data.longitude}")
 
     def c_space_callback(self, data):
-        self.curMap = data.data
-        self.ekfAtMap = (self.lastEKF.x, self.lastEKF.y)
+        if self.lastEKF:
+            self.curMap = data.data
+            self.ekfAtMap = (self.lastEKF.x, self.lastEKF.y)
 
     def path_callback(self, data):
         self.path = data

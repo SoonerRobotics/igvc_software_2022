@@ -8,6 +8,8 @@ from sensor_msgs.msg import Imu
 from std_msgs.msg import Int16, Bool
 from tf import transformations
 from math import sin, cos
+from datetime import datetime
+import csv
 
 import sys
 import PyQt5 as Qt
@@ -122,6 +124,14 @@ class IGVCWindow(QMainWindow):
         rospy.Subscriber("/igvc/system_state", Int16, self.system_state_callback)
         rospy.Subscriber("/igvc/mobstart", Bool, self.mobi_start_callback)
 
+        self.csvfile = open(f"/home/igvc/igvc_data/pf_test_{datetime.now().strftime('%Y%m%d-%H%M%S')}.csv", "w")
+        self.csvwriter = csv.writer(self.csvfile)
+
+        # self.csvwriter.writerow("timestamp, gps_lat, gps_lon, pf_lat, pf_lon, pf_x, pf_y, dr_x, dr_y")
+        self.csvwriter.writerow(["timestamp","gps_lat","gps_lon","pf_lat","pf_lon","pf_x","pf_y","dr_x","dr_y","dr_theta"])
+
+        self.first_gps = None
+
     def draw(self):
         if self.curMap and self.lastEKF and self.path:
             self.path_canvas.axes.clear()
@@ -153,6 +163,7 @@ class IGVCWindow(QMainWindow):
         if rospy.is_shutdown():
             # Cleanup with ROS is done
             app.quit()
+            self.csvfile.close()
 
     def mobi_start_callback(self, data):
         self.mobi_start = data.data
@@ -171,6 +182,10 @@ class IGVCWindow(QMainWindow):
         self.dead_rekt_cum = (x + data.delta_x * cos(theta) + data.delta_y * sin(theta), y + data.delta_x * sin(theta) + data.delta_y * cos(theta), theta + data.delta_theta)
         self.dead_rekt_label.setText(f"Dead rekt: {self.dead_rekt_cum[0]:0.02f},{self.dead_rekt_cum[1]:0.02f},{self.dead_rekt_cum[2]:0.02f}")
 
+        # timestamp, gps_lat, gps_lon, pf_lat, pf_lon, pf_x, pf_y, dr_x, dr_y
+        if self.mobi_start:
+            self.csvwriter.writerow([rospy.Time.now(),None,None,None,None,None,None,data.delta_x,data.delta_y,data.delta_theta])
+
     def system_state_callback(self, data):
         self.system_state = SystemState(data.data)
         self.system_state_label.setText(f"System State: {self.system_state.name}, Mobility: {'Start' if self.mobi_start else 'Stop'}")
@@ -188,9 +203,19 @@ class IGVCWindow(QMainWindow):
         else:
             self.gps_label.setText(f"GPS: No Signal")
 
+        # timestamp, gps_lat, gps_lon, pf_lat, pf_lon, pf_x, pf_y, dr_x, dr_y
+        if data.hasSignal and self.mobi_start:
+            if self.first_gps == None:
+                self.first_gps = (data.latitude, data.longitude)
+            self.csvwriter.writerow([rospy.Time.now(),data.latitude,data.longitude,None,None,None,None,None,None,None])
+
     def ekf_callback(self, data):
         self.lastEKF = data
         self.pose_label.setText(f"Pose: {data.x:0.01f}m, {data.y:0.01f}m\n\t{data.yaw * 180/3.14:0.01f}°\n\t{data.latitude}, {data.longitude}")
+
+        # timestamp, gps_lat, gps_lon, pf_lat, pf_lon, pf_x, pf_y, dr_x, dr_y
+        if self.mobi_start:
+            self.csvwriter.writerow([rospy.Time.now(),None,None,data.latitude,data.longitude,data.x,data.y,None,None,None])
 
     def c_space_callback(self, data):
         if self.lastEKF:

@@ -104,8 +104,8 @@ class ParticleFilterNode:
         output_msg.yaw = avg_theta
 
         if self.first_gps is not None:
-            output_msg.latitude = self.first_gps[0] + avg_x / 111200.0
-            output_msg.longitude = self.first_gps[1] + avg_y / 90850.0
+            output_msg.latitude = self.first_gps[0] + avg_x / 110984.8
+            output_msg.longitude = self.first_gps[1] + avg_y / 90994.1
 
         self.state_pub.publish(output_msg)
 
@@ -120,13 +120,13 @@ class ParticleFilterNode:
 
             return
 
-        gps_x = (data.latitude - self.first_gps[0]) * 111200.0 # Approximations
-        gps_y = (data.longitude - self.first_gps[1]) * 90850.0
+        gps_x = (data.latitude - self.first_gps[0]) * 110984.8 # Approximations
+        gps_y = (self.first_gps[1] - data.longitude) * 90994.1
 
         for particle in self.particles:
             dist_sqr = (particle.x - gps_x)**2 + (particle.y - gps_y)**2
 
-            particle.weight = exp(-dist_sqr / (2 * 1**2))
+            particle.weight = exp(-dist_sqr / (2 * 0.5**2))
 
         self.resample()
 
@@ -147,9 +147,9 @@ class ParticleFilterNode:
 
         for particle in new_particles:
             # Sprinkle some random
-            x = np.random.normal(particle.x, 0.05)
-            y = np.random.normal(particle.y, 0.05)
-            theta = np.random.normal(particle.theta, 0.05)
+            x = np.random.normal(particle.x, 0.5)
+            y = np.random.normal(particle.y, 0.5)
+            theta = np.random.normal(particle.theta, 0.1)
 
             self.particles.append(Particle(x, y, theta))            
 

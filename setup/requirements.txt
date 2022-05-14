@@ -3,3 +3,5 @@ rtree
 PyYAML
 pyserial
 python-can
+pygame
+pynmea2

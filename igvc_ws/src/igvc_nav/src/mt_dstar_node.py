@@ -205,7 +205,7 @@ def make_map(c_space):
         local_path.poses.reverse() # reverse path becuz its backwards lol
 
         # global_path_pub.publish(global_path)
-        # local_path_pub.publish(local_path)
+        local_path_pub.publish(local_path)
 
     else:
         # Set the path failed flag so we can fully replan

@@ -11,6 +11,9 @@ from sensor_msgs.msg import Image
 
 import matplotlib.pyplot as plt
 
+from cv_bridge import CvBridge
+bridge = CvBridge()
+
 occupancy_grid_size = 200
 
 start_time = None
@@ -21,7 +24,7 @@ height_offset = 58
 captured_width = 70
 captured_height = 50
 
-frame_rate = 8.0 # Hz
+frame_rate = 10.0 # Hz
 
 preview_pub = rospy.Publisher("/igvc/preview", Image, queue_size=1)
 image_pub = rospy.Publisher("/igvc/lane_map", OccupancyGrid, queue_size=1)
@@ -128,10 +131,10 @@ def camera_callback(data):
         print("cam read problem")
         return
 
-    image = cv2.GaussianBlur(image, (7,7), 0)
-    image = cv2.GaussianBlur(image, (7,7), 0)
+    blurred_image = cv2.GaussianBlur(image, (7,7), 0)
+    blurred_image = cv2.GaussianBlur(blurred_image, (7,7), 0)
 
-    pre_or_post_filtered_image = grass_filter(image)
+    pre_or_post_filtered_image = grass_filter(blurred_image)
 
     # gives the height and width of the image from the dimensions given
     height = image.shape[0]
@@ -156,6 +159,13 @@ def camera_callback(data):
 
     perpsective_crop = transform.trim_top_border(blurred)
     perspective_warp = transform.convert_to_flat(perpsective_crop)
+
+    pub_map = transform.trim_top_border(transform.convert_to_flat(image))
+    pub_map = cv2.resize(pub_map, dsize=(200, 200))
+    # pub_map = pub_map[vertical_offset:,:]
+    # pub_map = cv2.copyMakeBorder(pub_map, vertical_offset + height_offset, 200 - captured_height - height_offset, (200 - captured_width) // 2, (200 - captured_width) // 2, cv2.BORDER_CONSTANT, value=0)
+
+    preview_pub.publish(bridge.cv2_to_imgmsg(pub_map))
 
     # if imshowout == None:
     #     imshowout = plt.imshow(perspective_warp)

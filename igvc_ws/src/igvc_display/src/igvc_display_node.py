@@ -4,9 +4,8 @@ import rospy
 from enum import Enum
 from igvc_msgs.msg import EKFState, velocity, gps, deltaodom
 from nav_msgs.msg import OccupancyGrid, Path
-from sensor_msgs.msg import Imu
+from sensor_msgs.msg import Image
 from std_msgs.msg import Int16, Bool
-from tf import transformations
 from math import sin, cos
 from datetime import datetime
 import csv
@@ -18,10 +17,15 @@ from PyQt5.QtCore import QTimer
 from PyQt5.QtGui import QFont
 
 import numpy as np
+import matplotlib as plt
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg
 from matplotlib.figure import Figure
 
 from pygame import mixer
+
+import cv2
+from cv_bridge import CvBridge
+bridge = CvBridge()
 
 mixer.init()
 
@@ -57,13 +61,13 @@ class IGVCWindow(QMainWindow):
         self.centralWidget.setLayout(self.hlayout)
 
         self.vlayout = QVBoxLayout()
-        self.hlayout.addLayout(self.vlayout)
+        self.hlayout.addLayout(self.vlayout, stretch=1)
 
         self.path_canvas = IGVCPathCanvas(self, width=4, height=4, dpi=120)
-        self.hlayout.addWidget(self.path_canvas)
+        self.hlayout.addWidget(self.path_canvas, stretch=1)
 
         self.system_state_label = QLabel(self)
-        self.system_state_label.setText(f"System State: {'DISABLED'}, Mobility: {'Start'}")
+        self.system_state_label.setText(f"System State: {'DISABLED'}\nMobility: {'Start'}")
         self.system_state_label.setFont(QFont('Arial', 32))
 
         self.speed_label = QLabel(self)
@@ -108,6 +112,7 @@ class IGVCWindow(QMainWindow):
         self.system_state = SystemState.DISABLED
         self.mobi_start = False
         self.dead_rekt_cum = (0,0,0)
+        self.last_image = None
 
         # self.cam = cv2.VideoCapture(0)
 
@@ -123,6 +128,7 @@ class IGVCWindow(QMainWindow):
         rospy.Subscriber("/igvc/gps", gps, self.gps_callback)
         rospy.Subscriber("/igvc/system_state", Int16, self.system_state_callback)
         rospy.Subscriber("/igvc/mobstart", Bool, self.mobi_start_callback)
+        rospy.Subscriber("/igvc/preview", Image, self.image_callback)
 
         self.csvfile = open(f"/home/igvc/igvc_data/pf_test_{datetime.now().strftime('%Y%m%d-%H%M%S')}.csv", "w")
         self.csvwriter = csv.writer(self.csvfile)
@@ -133,10 +139,18 @@ class IGVCWindow(QMainWindow):
         self.first_gps = None
 
     def draw(self):
-        if self.curMap and self.lastEKF and self.path:
+        if self.curMap is not None and self.lastEKF is not None and self.path is not None:
             self.path_canvas.axes.clear()
 
-            self.path_canvas.axes.imshow(np.rot90(np.transpose(np.reshape(self.curMap, (200, 200))), 2), interpolation = 'nearest', extent=[-10, 10, -10, 10])
+            self.path_canvas.axes.imshow(self.last_image, extent=[-10, 10, 0, 10])
+            map_mat = np.rot90(np.transpose(np.reshape(self.curMap, (200, 200))), 2)
+            norm = plt.colors.Normalize()
+            colors = plt.cm.jet(norm(map_mat))
+            colors[:,:,3] = 0.5
+            colors[map_mat <= 2,3] = 0
+
+            # these values were hardcoded to absolute hell please don't lose them
+            self.path_canvas.axes.imshow(colors, interpolation = 'nearest', extent=[-28, 28, -18, 21])
 
             # Zoom into -5m to 5m
             
@@ -157,17 +171,18 @@ class IGVCWindow(QMainWindow):
 
             self.path_canvas.draw()
 
+
     def draw_timer(self):
-        self.draw()
-        
         if rospy.is_shutdown():
             # Cleanup with ROS is done
             app.quit()
             self.csvfile.close()
 
+        self.draw()
+
     def mobi_start_callback(self, data):
         self.mobi_start = data.data
-        self.system_state_label.setText(f"System State: {self.system_state.name}, Mobility: {'Start' if self.mobi_start else 'Stop'}")
+        self.system_state_label.setText(f"System State: {self.system_state.name}\nMobility: {'Start' if self.mobi_start else 'Stop'}")
 
         if data.data == True and self.system_state == SystemState.AUTONOMOUS:
             mixer.music.play()
@@ -188,7 +203,7 @@ class IGVCWindow(QMainWindow):
 
     def system_state_callback(self, data):
         self.system_state = SystemState(data.data)
-        self.system_state_label.setText(f"System State: {self.system_state.name}, Mobility: {'Start' if self.mobi_start else 'Stop'}")
+        self.system_state_label.setText(f"System State: {self.system_state.name}\nMobility: {'Start' if self.mobi_start else 'Stop'}")
 
         if self.system_state == SystemState.DISABLED:
             self.dead_rekt_cum = (0, 0, 0)
@@ -211,7 +226,7 @@ class IGVCWindow(QMainWindow):
 
     def ekf_callback(self, data):
         self.lastEKF = data
-        self.pose_label.setText(f"Pose: {data.x:0.01f}m, {data.y:0.01f}m\n\t{data.yaw * 180/3.14:0.01f}°\n\t{data.latitude}, {data.longitude}")
+        self.pose_label.setText(f"Pose: {data.x:0.01f}m, {data.y:0.01f}m\n\t{data.yaw * 180/3.14:0.01f}°\n\t{data.latitude:0.06f}, {data.longitude:0.06f}")
 
         # timestamp, gps_lat, gps_lon, pf_lat, pf_lon, pf_x, pf_y, dr_x, dr_y
         if self.mobi_start:
@@ -224,7 +239,11 @@ class IGVCWindow(QMainWindow):
 
     def path_callback(self, data):
         self.path = data
+    
+    def image_callback(self, data):
+        self.last_image = bridge.imgmsg_to_cv2(data)
 
+    
 # Main setup
 if __name__ == '__main__':
     try:

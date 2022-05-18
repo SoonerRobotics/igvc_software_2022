@@ -14,6 +14,7 @@ typedef struct{
     unsigned int task_10ms : 1;
     unsigned int task_100ms : 1;
     unsigned int task_1000ms: 1;
+    unsigned int task_500ms: 1;
   
 }tasks_t;
 
@@ -45,6 +46,10 @@ void set_ms_flags(){
   if (ms_count % 100 == 0)
   {
     mainTasks.task_100ms = 1;
+  }
+  if (ms_count % 500 == 0)
+  {
+    mainTasks.task_500ms = 1;
   }
   if (ms_count % 1000 == 0)
   {

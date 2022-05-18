@@ -8,12 +8,22 @@
 #ifndef COMMON_H
 #define COMMON_H
 
+
+typedef  struct{
+      short xn;
+      short yn;
+      short on;
+}distance;
+
+distance motorDistances;
+
 typedef struct{
     unsigned int task_1ms : 1;
     unsigned int task_5ms : 1;
     unsigned int task_10ms : 1;
     unsigned int task_100ms : 1;
     unsigned int task_1000ms: 1;
+    unsigned int task_50ms: 1;
   
 }tasks_t;
 
@@ -41,6 +51,10 @@ void set_ms_flags(){
   if (ms_count % 10 == 0)
   {
     mainTasks.task_10ms = 1;
+  }
+  if (ms_count % 50 == 0)
+  {
+    mainTasks.task_50ms = 1; 
   }
   if (ms_count % 100 == 0)
   {

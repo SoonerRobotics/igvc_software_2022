@@ -8,7 +8,7 @@
 
 #define MOTOR_UPDATE_RATE 100 // Frequency that motor PID is updated (Hz)
 #define MAX_SPEED 2.2f // (m/s)
-#define PULSES_PER_REV (600 * 7 * 2) // (revs)
+#define PULSES_PER_REV (600.0f * 7 * 2) // (revs)
 //#define LINEAR_PER_REV 0.2054f // Wheel radius (m) old
 #define LINEAR_PER_REV 0.2032f // Wheel radius (m)
 #define MILLIS_TO_FULL 250 // Milliseconds to go from 0 output speed to 1
@@ -45,6 +45,7 @@ class motor {
   int currState_;
   volatile int pulses = 0;
 
+  volatile int delta = 0;
   
   // equations
   float kp = 0.05f;
@@ -78,11 +79,13 @@ class motor {
             if ((prevState_ == 0x3 && currState_ == 0x0) ||
                     (prevState_ == 0x0 && currState_ == 0x3)) {
                 this->pulses++;
+                this->delta++;
             }
             //10->01->10->01 is clockwise rotation or "backward".
             else if ((prevState_ == 0x2 && currState_ == 0x1) ||
                      (prevState_ == 0x1 && currState_ == 0x2)) {
                 this->pulses--;
+                this->delta--;
             }
             
             prevState_ = currState_;
@@ -139,6 +142,11 @@ class motor {
       motorServo.write(servoOut);
       
     }
+      float getDistance(){
+        float temp = this->delta / PULSES_PER_REV * LINEAR_PER_REV *  PI * 2.0 * 2.0;
+        this->delta = 0;
+        return temp;
+      }
 
       float getSpeedEstimate() 
       {
@@ -206,7 +214,14 @@ class motor {
             }
             return val;
         }
-    
+
+        void resetError(){
+            this->error = 0.0f;
+            this->prevError = 0.0f;
+            this->lastState = 0.0f;
+        }
+      
+        
     
   
 };

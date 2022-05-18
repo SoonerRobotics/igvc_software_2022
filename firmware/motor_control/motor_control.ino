@@ -6,8 +6,9 @@ IntervalTimer mainTaskTimer;
 /*
 
 */
-//
-#define waitEstop 1
+// 1 = doesn't wait for mobility start signal
+// 0 = waits for mobility start signal.
+#define waitEstop 0
 
 const int ledPin = LED_BUILTIN;
 const int encoderLeftB = 6;
@@ -17,6 +18,12 @@ const int encoderRightB = 9;
 
 const int leftMotorPin = 2;
 const int rightMotorPin = 3;
+
+const int estopPin = 20;
+
+float dxn = 0;
+float dyn = 0;
+float don = 0;
 
 motor leftMotor(leftMotorPin, true);
 motor rightMotor(rightMotorPin, false);
@@ -30,6 +37,7 @@ long counter = 0;
 void setup() {
   // put your setup code here, to run once:
   pinMode(ledPin, OUTPUT);
+  pinMode(estopPin, INPUT);
   pinMode(encoderLeftA, INPUT_PULLUP);
   pinMode(encoderLeftB, INPUT_PULLUP);
   pinMode(encoderRightA, INPUT_PULLUP);
@@ -54,11 +62,11 @@ void setup() {
 
   leftMotor = 0;
   rightMotor = 0;
-  digitalWrite(20, HIGH);
+  //digitalWrite(20, HIGH);
   robotStatus.eStop = 0;
   robotStatus.mStop = 1;
-
   robotStatus.mStart = 0;
+  
   #if waitEstop == 1
       robotStatus.mStop = 0;
       robotStatus.mStart = 1;
@@ -68,8 +76,15 @@ void setup() {
 bool tog = false;
 
 void receiveMSG(const CAN_message_t &msg){
-  if(robotStatus.mStop){
+  digitalWrite(ledPin, tog);
+  if(robotStatus.mStop || robotStatus.eStop){
+     
      switch(msg.id){
+      case 1:
+        robotStatus.eStop = 0;
+        robotStatus.mStop = 1;
+        robotStatus.mStart = 0;
+        break;
       case 9:
         robotStatus.mStop = 0;
         robotStatus.mStart = 1;
@@ -79,7 +94,7 @@ void receiveMSG(const CAN_message_t &msg){
   if (robotStatus.mStart){
     lastMSG = msg;
     tog = !tog;
-    digitalWrite(ledPin, tog);
+   
     //Serial.printf("can sent ");
     
     switch (msg.id){
@@ -91,6 +106,7 @@ void receiveMSG(const CAN_message_t &msg){
       case 1: 
         robotStatus.mStop = 1;
         robotStatus.mStart = 0;
+        robotStatus.eStop = 0;
         break;
       case 10:
         signed char t1 = msg.buf[0];
@@ -98,18 +114,7 @@ void receiveMSG(const CAN_message_t &msg){
         leftMotor = (signed char) t1 * msg.buf[2] / 10.0 / 128.0;
         rightMotor = (signed char) t2 * msg.buf[2] / 10.0 / 128.0;
 
-        CAN_message_t outMsg;
-        outMsg.flags.extended = 0;
-        outMsg.id = 11;
-        outMsg.len = 3;
-        signed char left = leftMotor.getSpeedEstimate() * 128 / 2.2;
-        signed char right = rightMotor.getSpeedEstimate() * 128 / 2.2;
-        float spd = 22;
-        //Serial.print((char) left);
-        outMsg.buf[0] = (char) left;
-        outMsg.buf[1] = (char) right;
-        outMsg.buf[2] = (char) spd;
-        Can0.write(outMsg);
+
         break;
     }
   }
@@ -128,17 +133,17 @@ void updateRight()
 void loop() {
   // put your main code here, to run repeatedly:
 
-  if(robotStatus.eStop){
+  if(robotStatus.eStop || !digitalRead(estopPin)){
     leftMotor = 0.0f;
     rightMotor = 0.0f;
-
-    leftMotor.brake();
-    rightMotor.brake();
-
-    mainTaskTimer.end();
-    Can0.disableFIFO();
-    Can0.disableFIFOInterrupt();
-    while(true);
+    leftMotor.resetError();
+    rightMotor.resetError();
+  }
+  if(robotStatus.mStop){
+    leftMotor = 0;
+    rightMotor = 0;
+    leftMotor.resetError();
+    rightMotor.resetError();
   }
 
   if(!robotStatus.eStop){
@@ -161,12 +166,58 @@ void loop() {
       //Code here
       leftMotor.update();
       rightMotor.update();
-
-
-      //
       //Serial.printf("rightspeed %f ", leftMotor.getSpeedEstimate());
       //Serial.printf("targetspeed %f \n", targetRightSpeed);
+      float left_distance = leftMotor.getDistance();
+      float right_distance = rightMotor.getDistance();
+
+      dxn = dxn + (left_distance + right_distance) / 2 * cos(don);
+      dyn = dyn + (left_distance + right_distance) / 2 * sin(don);
+      don = don + (right_distance - left_distance) * 0.1016 / 0.4826;
+
+      motorDistances.xn = (short)(dxn * 10000);
+      motorDistances.yn = (short)(dyn * 10000);
+      motorDistances.on = (short)(don * 10000);
+      
+      
       mainTasks.task_10ms = 0;
+    }
+    if(mainTasks.task_50ms)
+    {
+
+
+      CAN_message_t outMsg;
+      outMsg.flags.extended = 0;
+      outMsg.id = 11;
+      outMsg.len = 3;
+      signed char left = leftMotor.getSpeedEstimate() * 128 / 2.2;
+      signed char right = rightMotor.getSpeedEstimate() * 128 / 2.2;
+      float spd = 22;
+      //Serial.print((char) left);
+      outMsg.buf[0] = (char) left;
+      outMsg.buf[1] = (char) right;
+      outMsg.buf[2] = (char) spd;
+      Can0.write(outMsg);
+      
+      CAN_message_t outMsg2;
+      outMsg2.flags.extended = 0;
+      outMsg2.id = 14;
+      outMsg2.len = 6;
+      //Serial.print((char) left);
+      memcpy(outMsg2.buf, &motorDistances, 6);
+      //outMsg.buf = (uint8_t[8])(&motorDistances);
+      Can0.write(outMsg2);
+
+      //set the delta
+      motorDistances.xn = 0;
+      motorDistances.yn = 0;
+      motorDistances.on = 0;
+      dxn = 0;
+      dyn = 0;
+      don = 0;
+      
+      
+      mainTasks.task_50ms = 0;  
     }
     if(mainTasks.task_100ms)
     {

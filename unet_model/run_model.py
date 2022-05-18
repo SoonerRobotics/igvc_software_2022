@@ -9,17 +9,24 @@ from unet import *
 
 # Load the images
 #ins, ins_filenames = read_images_from_directory("./example/video_frames", "img_[\d]*.png", processing='in')
-cam = cv2.VideoCapture('test2.mp4')
+cam = cv2.VideoCapture('test3.mp4')
 ret, img = cam.read()
 #print (ret)
 ins = []
+count = 0
 while ret:
     ret, img = cam.read()
+    cv2.imwrite(f"./example/video_in/f{count:04}.png", cv2.resize(img, (1024, 576)))
+    img = readVideo(img, processing='in')
+    
     ##cv2.imshow('before',img)
     if not ret:
             break
     #cv2.imshow('before', img)
-    ins.append(readVideo(img, processing='in'))
+    
+
+    count = count + 1
+    ins.append(img)
 cam.release()
 #print(ins)
 ins = np.array(ins, dtype=np.float32)

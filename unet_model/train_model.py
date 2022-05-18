@@ -11,8 +11,8 @@ from unet import *
 
 def split_data(args, valid_percent = 0.15):
     # Fetch images
-    outs, out_filenames = read_images_from_directory("input/igvc_outs", "out[\d]*.png", processing='out')
-    ins, in_filenames = read_images_from_directory("input/igvc_ins", "out[\d]*.png", whitelist=out_filenames, processing='in')
+    outs, out_filenames = read_images_from_directory("input/igvc_outs2", "out[\d]*.png", processing='out')
+    ins, in_filenames = read_images_from_directory("input/igvc_ins2", "out[\d]*.png", whitelist=out_filenames, processing='in')
 
     #print(outs)
     # Process outputs
@@ -30,7 +30,7 @@ def train(args):
     print("ins: ", ins.shape)
     print("outs: ", outs.shape)
 
-    model = SCRUNet()
+    model = unet()
         
     # Report if verbosity is turned on
     if args.verbose >= 1:
@@ -69,10 +69,10 @@ def train(args):
 
 def get_args():
     parser = argparse.ArgumentParser(description='SCR UNet for Lane Detection')
-    parser.add_argument('-epochs', type=int, default=2000, help='Training epochs')
+    parser.add_argument('-epochs', type=int, default=500, help='Training epochs')
     parser.add_argument('-results_path', type=str, default='./results/', help='Results directory')
     parser.add_argument('-model_name', type=str, default='SCRUNet', help='Model name for output files')
-    parser.add_argument('-lrate', type=float, default=0.001, help="Learning rate")
+    parser.add_argument('-lrate', type=float, default=0.01, help="Learning rate")
     parser.add_argument('-patience', type=int, default=200, help="Patience for early termination")
     parser.add_argument('-verbose', '-v', action='count', default=2, help="Verbosity level")
     

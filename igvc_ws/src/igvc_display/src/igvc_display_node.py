@@ -20,6 +20,8 @@ import numpy as np
 import matplotlib as plt
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg
 from matplotlib.figure import Figure
+import matplotlib.animation as animation
+
 
 from pygame import mixer
 
@@ -42,11 +44,11 @@ class SystemState(Enum):
     AUTONOMOUS = 2
 
 class IGVCPathCanvas(FigureCanvasQTAgg):
-    def __init__(self, parent=None, width=5, height=4, dpi=100):
-        fig = Figure(figsize=(width, height), dpi=dpi)
-        self.axes = fig.add_subplot(111)
+    def __init__(self, parent=None, width=1, height=1, dpi=10):
+        self.fig = Figure(figsize=(width, height), dpi=dpi)
+        self.axes = self.fig.add_subplot(111)
         # self.axes2 = fig.add_subplot(122)
-        super(IGVCPathCanvas, self).__init__(fig)
+        super(IGVCPathCanvas, self).__init__(self.fig)
 
 class IGVCWindow(QMainWindow):
     def __init__(self):
@@ -67,7 +69,7 @@ class IGVCWindow(QMainWindow):
         self.vlayout = QVBoxLayout()
         self.hlayout.addLayout(self.vlayout, stretch=1)
 
-        self.path_canvas = IGVCPathCanvas(self, width=4, height=4, dpi=120)
+        self.path_canvas = IGVCPathCanvas(self, width=2, height=2, dpi=200)
         self.hlayout.addWidget(self.path_canvas, stretch=1)
 
         self.system_state_label = QLabel(self)
@@ -103,11 +105,13 @@ class IGVCWindow(QMainWindow):
 
         self.setCentralWidget(self.centralWidget)
 
-        # Setup draw timer
-        self.timer = QTimer()
-        self.timer.setInterval(300)
-        self.timer.timeout.connect(self.draw_timer)
-        self.timer.start()
+        # # Setup draw timer
+        # self.timer = QTimer()
+        # self.timer.setInterval(300)
+        # self.timer.timeout.connect(self.draw_timer)
+        # self.timer.start()
+
+        self.ani =  animation.FuncAnimation(self.path_canvas.fig, self.draw, interval=100)
 
         self.curMap = None
         self.lastEKF = None
@@ -142,11 +146,11 @@ class IGVCWindow(QMainWindow):
 
         self.first_gps = None
 
-    def draw(self):
+    def draw(self, i):
         if self.curMap is not None and self.lastEKF is not None:
             self.path_canvas.axes.clear()
 
-            self.path_canvas.axes.imshow(self.last_image, extent=[-camera_horizontal_distance/2, camera_horizontal_distance/2, 0, camera_vertical_distance])
+            self.path_canvas.axes.imshow(self.last_image, interpolation = 'none', extent=[-camera_horizontal_distance/2, camera_horizontal_distance/2, 0, camera_vertical_distance])
 
             map_mat = np.reshape(self.curMap, (100, 200))
             norm = plt.colors.Normalize()
@@ -154,7 +158,7 @@ class IGVCWindow(QMainWindow):
             colors[:,:,3] = 0.5
             colors[map_mat == 0,3] = 0
 
-            self.path_canvas.axes.imshow(colors, interpolation = 'nearest', extent=[-camera_horizontal_distance/2, camera_horizontal_distance/2, 0, camera_vertical_distance])
+            self.path_canvas.axes.imshow(colors, interpolation = 'none', extent=[-camera_horizontal_distance/2, camera_horizontal_distance/2, 0, camera_vertical_distance])
 
             # # Zoom into -5m to 5m
             

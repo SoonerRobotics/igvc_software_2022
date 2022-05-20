@@ -254,9 +254,9 @@ def make_map(c_space):
 
     # TODO: Make this not True again lol
     if True:
-        start_time = time.time()
+        # start_time = time.time()
         path = find_path_to_point(robot_pos, best_pos, cost_map, 200, 100)
-        print(f"plan time: {(time.time() - start_time) * 1000:02.02f}ms")
+        # print(f"plan time: {(time.time() - start_time) * 1000:02.02f}ms")
         map_init = True
 
     if path is not None:
@@ -305,7 +305,7 @@ def mt_dstar_node():
         rospy.Subscriber("/igvc/state", EKFState, ekf_callback)
 
     # Make a timer to publish new paths
-    timer = rospy.Timer(rospy.Duration(secs=0.2), make_map, oneshot=False)
+    timer = rospy.Timer(rospy.Duration(secs=0.1), make_map, oneshot=False)
 
     # if SHOW_PLOTS:
     setup_pyplot()

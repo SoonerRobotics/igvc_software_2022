@@ -62,7 +62,7 @@ class mt_dstar_lite:
 
     def heuristic(self, node1, node2):
         """ Compute the distance from one node to another """
-        return sqrt((node2.row - node1.row)**2 + (node2.col - node1.col)**2)
+        return sqrt((node2.row - node1.row)**2.0 + (node2.col - node1.col)**2.0)
 
     def cost(self, node1, node2):
         """ Computer actual cost incurred by moving from one node to another """

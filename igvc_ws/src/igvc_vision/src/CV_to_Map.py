@@ -34,7 +34,7 @@ header.frame_id = "base_link"
 
 map_info = MapMetaData()
 map_info.width = occupancy_grid_size
-map_info.height = occupancy_grid_size
+map_info.height = 100
 map_info.resolution = 0.1
 map_info.origin = Pose()
 map_info.origin.position.x = -10
@@ -52,7 +52,7 @@ class PerspectiveTransform:
         self.camera_angle = camera_angle
 
         # Ratio of number of pixels between top points of the trapezoid and their nearest vertical border
-        self.horizontal_corner_cut_ratio = 0.3
+        self.horizontal_corner_cut_ratio = 0.25
 
         # Output image dimensions
         self.output_img_shape_x = 640
@@ -131,8 +131,8 @@ def camera_callback(data):
         print("cam read problem")
         return
 
-    blurred_image = cv2.GaussianBlur(image, (7,7), 0)
-    blurred_image = cv2.GaussianBlur(blurred_image, (7,7), 0)
+    blurred_image = cv2.GaussianBlur(image, (5,5), 0)
+    blurred_image = cv2.GaussianBlur(blurred_image, (5,5), 0)
 
     pre_or_post_filtered_image = grass_filter(blurred_image)
 
@@ -143,7 +143,7 @@ def camera_callback(data):
     # used for non-hd video
     region_of_interest_vertices = [
         (0, height),
-        (width / 2, height / 2 + 70),
+        (width / 2, height / 2 + 120),
         (width, height),
     ]
 
@@ -160,12 +160,13 @@ def camera_callback(data):
     perpsective_crop = transform.trim_top_border(blurred)
     perspective_warp = transform.convert_to_flat(perpsective_crop)
 
-    pub_map = transform.trim_top_border(transform.convert_to_flat(image))
-    pub_map = cv2.resize(pub_map, dsize=(200, 200))
+    pub_map = transform.convert_to_flat(transform.trim_top_border(region_of_interest(image, np.array([region_of_interest_vertices], np.int32))))
+    # pub_map = cv2.resize(pub_map, dsize=(200, 200))
     # pub_map = pub_map[vertical_offset:,:]
     # pub_map = cv2.copyMakeBorder(pub_map, vertical_offset + height_offset, 200 - captured_height - height_offset, (200 - captured_width) // 2, (200 - captured_width) // 2, cv2.BORDER_CONSTANT, value=0)
-
     preview_pub.publish(bridge.cv2_to_imgmsg(pub_map))
+
+    
 
     # if imshowout == None:
     #     imshowout = plt.imshow(perspective_warp)
@@ -200,12 +201,11 @@ def region_of_interest(img, vertices):
 
 def numpy_to_occupancyGrid(data_map):
     # dsize is (width, height) and copyMakeBorder is (tp, bottom, left, right)
-    data_map = cv2.dilate(data_map, (5, 5), iterations=3)
-    data_map = cv2.resize(data_map, dsize=(captured_width, captured_height), interpolation=cv2.INTER_LINEAR) / 2
-    data_map = data_map[vertical_offset:,:]
-    data_map = cv2.copyMakeBorder(data_map, vertical_offset + height_offset, 200 - captured_height - height_offset, (200 - captured_width) // 2, (200 - captured_width) // 2, cv2.BORDER_CONSTANT, value=0)
-    data_map = cv2.flip(data_map, 0)
-    data_map = cv2.rotate(data_map, cv2.ROTATE_90_COUNTERCLOCKWISE)
+    # data_map = cv2.dilate(data_map, (5, 5), iterations=1)
+    # data_map = data_map[vertical_offset:,:]
+    data_map = cv2.resize(data_map, dsize=(200, 100), interpolation=cv2.INTER_LINEAR) / 2
+    # data_map = cv2.flip(data_map, 0)
+    # data_map = cv2.rotate(data_map, cv2.ROTATE_90_COUNTERCLOCKWISE)
     flattened = list(data_map.flatten().astype(int))
 
     # print(f"data_map shape: {data_map.shape}")
@@ -230,7 +230,7 @@ if __name__ == '__main__':
     rospy.init_node('lane_finder', anonymous=True)
     # rospy.Subscriber("/cv_camera/image_raw/compressed", CompressedImage, camera_callback)
     
-    cam = cv2.VideoCapture(0, cv2.CAP_V4L2)
+    cam = cv2.VideoCapture(2, cv2.CAP_V4L2)
     cam.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
     cam.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
 

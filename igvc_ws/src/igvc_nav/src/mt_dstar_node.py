@@ -9,12 +9,21 @@ from igvc_msgs.msg import motors, EKFState
 from igvc_msgs.srv import EKFService
 import tf
 import copy
+import time
 import numpy as np
 from path_planner.mt_dstar_lite import mt_dstar_lite
 from utilities.dstar_viewer import draw_dstar, setup_pyplot
+from heapq import heappush, heappop
+from matplotlib import pyplot as plt
+
 
 SHOW_PLOTS = False
 USE_SIM_TRUTH = False
+
+# Camera Vertical vision (m)
+camera_vertical_distance = 2.75
+# Camera Horizontal vision (m)
+camera_horizontal_distance = 3
 
 global_path_pub = rospy.Publisher("/igvc/global_path", Path, queue_size=1)
 local_path_pub = rospy.Publisher("/igvc/local_path", Path, queue_size=1)
@@ -64,60 +73,54 @@ def c_space_callback(c_space):
     grid_data = c_space.data
 
     # Make a costmap
-    temp_cost_map = [0] * 200 * 200
+    temp_cost_map = [0] * 200 * 100
 
     # Find the best position
-    temp_best_pos = (100, 100)
+    temp_best_pos = (100, 99)
     best_pos_cost = -1000
-
-    # Only look forward for the goal
-    for x in range(200):
-        for y in range(200):
-            if x >= 100:
-                temp_cost_map[(y * 200) + x] = grid_data[(y * 200) + x]
-            else:
-                temp_cost_map[(y * 200) + x] = 100
 
     # Breath-first look for good points
     # This allows us to find a point within the range of obstacles by not
     # exploring over obstacles.
     frontier = set()
-    frontier.add((100,100))
+    frontier.add((100,99))
     explored = set()
 
     depth = 0
     while depth < 50 and len(frontier) > 0:
         curfrontier = copy.copy(frontier)
         for pos in curfrontier:
+            x = pos[0] # left to right
+            y = pos[1] # top to botom
             # Cost at a point is sum of
             # - Negative X value (encourage forward)
             # - Positive Y value (discourage left/right)
             # - Depth (number of breath-first search iterations)
             # - Config space cost
-            cost = (pos[0] - 100) + -abs(pos[1] - 100) + depth - temp_cost_map[pos[1] * 200 + pos[0]]
+            cost = (100 - y) + -abs(x - 100) + depth - grid_data[x + y * 200]
             if cost > best_pos_cost:
                 best_pos_cost = cost
                 temp_best_pos = pos
 
             frontier.remove(pos)
-            explored.add(pos[1] * 200 + pos[0])
+            explored.add(pos[1] * 100 + pos[0])
 
             # Look left/right for good points
-            if pos[1] < 199 and temp_cost_map[(pos[1] + 1) * 200 + pos[0]] != 100 and (pos[1] + 1) * 200 + pos[0] not in explored:
-                frontier.add((pos[0], pos[1]+1))
-            if pos[1] > 0 and temp_cost_map[(pos[1] - 1) * 200 + pos[0]] != 100 and (pos[1] - 1) * 200 + pos[0] not in explored:
-                frontier.add((pos[0], pos[1]-1))
+            if y < 99 and grid_data[x + 200 * (y+1)] != 100 and x + 200 * (y+1) not in explored:
+                frontier.add((x, y+1))
+            if y > 0 and grid_data[x + 200 * (y-1)] != 100 and x + 200 * (y-1) not in explored:
+                frontier.add((x, y-1))
 
             # Look forward/back for good points
-            if pos[0] < 199 and temp_cost_map[pos[1] * 200 + pos[0] + 1] != 100 and pos[1] * 200 + pos[0] + 1 not in explored:
-                frontier.add((pos[0]+1, pos[1]))
-            if pos[0] > 0 and temp_cost_map[pos[1] * 200 + pos[0] - 1] != 100 and pos[1] * 200 + pos[0] - 1 not in explored:
-                frontier.add((pos[0]-1, pos[1]))
+            if x < 199 and grid_data[x + 1 + 200 * y] != 100 and x + 1 + 200 * y not in explored:
+                frontier.add((x+1, y))
+            if x > 0 and grid_data[x - 1 + 200 * y] != 100 and x - 1 + 200 * y not in explored:
+                frontier.add((x-1, y))
 
         depth += 1
 
     map_reference = (curEKF.x, curEKF.y, curEKF.yaw)
-    cost_map = temp_cost_map
+    cost_map = grid_data
     best_pos = temp_best_pos
     map_init = False
 
@@ -149,12 +152,91 @@ def path_point_to_local_pose_stamped(pp0, pp1, header):
     pose_stamped.pose = Pose()
 
     point = Point()
-    point.x = (pp0 - 100) / 10
-    point.y = (pp1 - 100) / 10
+    point.x = (pp0 - 100) * camera_horizontal_distance / 200
+    point.y = (100 - pp1) * camera_vertical_distance / 100
     pose_stamped.pose.position = point
 
     return pose_stamped
+        
+def reconstruct_path(path, current):
+    total_path = [current]
 
+    while current in path:
+        current = path[current]
+        total_path.append(current)
+
+    return total_path[::-1]
+
+def find_path_to_point(start, goal, map, width, height):
+
+    looked_at = np.zeros((200, 100))
+    
+
+    open_set = [start]
+
+    path = {}
+
+    search_dirs = [(-1, 0), (1, 0), (0, 1), (0, -1)]
+
+    def h(point):
+        return math.sqrt((goal[0] - point[0])**2 + (goal[1] - point[1])**2)
+
+    # assumes adjacent pts
+    def d(to_pt):
+        return 1 + map[to_pt[1] * width + to_pt[0]]
+
+    gScore = {}
+    gScore[start] = 0
+
+    def getG(pt):
+        if pt in gScore:
+            return gScore[pt]
+        else:
+            gScore[pt] = 1000000000
+            return 1000000000 # Infinity
+
+    fScore = {}
+    fScore[start] = h(start)
+
+    def getF(pt):
+        if pt in fScore:
+            return fScore[pt]
+        else:
+            fScore[pt] = 1000000000
+            return 1000000000 # Infinity
+
+    next_current = [(1,start)]
+    while len(open_set) != 0:
+        current = heappop(next_current)[1]
+
+        looked_at[current[0],current[1]] = 1
+
+        if current == goal:
+            # plt.figure(1)
+            # plt.clf()
+            
+            # plt.imshow(looked_at, interpolation = 'nearest')
+
+            # plt.draw()
+            # plt.pause(0.00000000001)
+            return reconstruct_path(path, current)
+
+        open_set.remove(current)
+        for delta_x, delta_y in search_dirs:
+
+            neighbor = (current[0] + delta_x, current[1] + delta_y)
+            if neighbor[0] < 0 or neighbor[0] >= width or neighbor[1] < 0 or neighbor[1] >= height:
+                continue
+
+            tentGScore = getG(current) + d(neighbor)
+            if tentGScore < getG(neighbor):
+                path[neighbor] = current
+                gScore[neighbor] = tentGScore
+                fScore[neighbor] = tentGScore + h(neighbor)
+                if neighbor not in open_set:
+                    open_set.append(neighbor)
+                    heappush(next_current, (fScore[neighbor], neighbor))
+                    
 def make_map(c_space):
     global planner, map_init, path_failed, prev_state, path_seq
 
@@ -164,7 +246,7 @@ def make_map(c_space):
     # Reset the path
     path = None
 
-    robot_pos = (100, 100)
+    robot_pos = (100, 99)
 
     # MOVING TARGET D*LITE
     # If this is the first time receiving a map, or if the path failed to be made last time (for robustness),
@@ -172,21 +254,10 @@ def make_map(c_space):
 
     # TODO: Make this not True again lol
     if True:
-        planner.initialize(200, 200, robot_pos, best_pos, cost_map)
-        path = planner.plan()
+        start_time = time.time()
+        path = find_path_to_point(robot_pos, best_pos, cost_map, 200, 100)
+        print(f"plan time: {(time.time() - start_time) * 1000:02.02f}ms")
         map_init = True
-    # Otherwise, replan the path
-    else:
-        # Transform the map to account for heading changes
-        hdg = curEKF.yaw
-        #TODO: rotate map to 0 degree heading
-
-        # Calculate the map shift based on the change in EKF state
-        map_shift = (int(curEKF.x / GRID_SIZE) - prev_state[0], int(curEKF.y / GRID_SIZE) - prev_state[1])
-        prev_state = (int(curEKF.x / GRID_SIZE), int(curEKF.y / GRID_SIZE))
-
-        # Request the planner replan the path
-        path = planner.replan(robot_pos, best_pos, cost_map) #, map_shift) # TODO: add in shifting
 
     if path is not None:
         header = Header()
@@ -236,8 +307,8 @@ def mt_dstar_node():
     # Make a timer to publish new paths
     timer = rospy.Timer(rospy.Duration(secs=0.2), make_map, oneshot=False)
 
-    if SHOW_PLOTS:
-        setup_pyplot()
+    # if SHOW_PLOTS:
+    setup_pyplot()
 
     # Wait for topic updates
     rospy.spin()

@@ -44,7 +44,7 @@ class ParticleFilterNode:
 
     def __init__(self):
         # Parameters
-        self.num_particles = 500
+        self.num_particles = 100
 
         # ROS Setup
         # rospy.Subscriber("/igvc/velocity", velocity, self.velocity_callback)

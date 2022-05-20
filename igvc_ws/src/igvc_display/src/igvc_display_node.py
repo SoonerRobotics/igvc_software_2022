@@ -29,6 +29,10 @@ bridge = CvBridge()
 
 mixer.init()
 
+# Camera Vertical vision (m)
+camera_vertical_distance = 2.75
+# Camera Horizontal vision (m)
+camera_horizontal_distance = 3
 
 app = None
 
@@ -139,30 +143,33 @@ class IGVCWindow(QMainWindow):
         self.first_gps = None
 
     def draw(self):
-        if self.curMap is not None and self.lastEKF is not None and self.path is not None:
+        if self.curMap is not None and self.lastEKF is not None:
             self.path_canvas.axes.clear()
 
-            self.path_canvas.axes.imshow(self.last_image, extent=[-10, 10, 0, 10])
-            map_mat = np.rot90(np.transpose(np.reshape(self.curMap, (200, 200))), 2)
+            self.path_canvas.axes.imshow(self.last_image, extent=[-camera_horizontal_distance/2, camera_horizontal_distance/2, 0, camera_vertical_distance])
+
+            map_mat = np.reshape(self.curMap, (100, 200))
             norm = plt.colors.Normalize()
             colors = plt.cm.jet(norm(map_mat))
             colors[:,:,3] = 0.5
-            colors[map_mat <= 2,3] = 0
+            colors[map_mat == 0,3] = 0
 
-            # these values were hardcoded to absolute hell please don't lose them
-            self.path_canvas.axes.imshow(colors, interpolation = 'nearest', extent=[-28, 28, -18, 21])
+            self.path_canvas.axes.imshow(colors, interpolation = 'nearest', extent=[-camera_horizontal_distance/2, camera_horizontal_distance/2, 0, camera_vertical_distance])
 
-            # Zoom into -5m to 5m
+            # # Zoom into -5m to 5m
             
             for pose in self.path.poses:
                 point = (pose.pose.position.x, pose.pose.position.y)
-                self.path_canvas.axes.plot(-point[1], point[0], '.', markersize=8, color="red")
+                self.path_canvas.axes.plot(point[0], point[1], '.', markersize=8, color="red")
 
             robot_pos = (self.lastEKF.x - self.ekfAtMap[0], self.lastEKF.y - self.ekfAtMap[1])
-            self.path_canvas.axes.plot(robot_pos[1], -robot_pos[0], '.', markersize=16, color="black")
+            self.path_canvas.axes.plot(robot_pos[0], robot_pos[1], '.', markersize=16, color="black")
 
-            self.path_canvas.axes.set_xlim(-5, 5)
-            self.path_canvas.axes.set_ylim(0, 10)
+            self.path_canvas.axes.set_ylabel('x (m)')
+            self.path_canvas.axes.set_xlabel('y (m)')
+
+            # self.path_canvas.axes.set_xlim(-5, 5)
+            # self.path_canvas.axes.set_ylim(0, 5)
 
             # yes, pic = self.cam.read()
 

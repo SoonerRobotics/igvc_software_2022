@@ -3,6 +3,8 @@
 from turtle import left, right
 import rospy
 from std_msgs.msg import Bool, Int16
+from nav_msgs.msg import Path
+from geometry_msgs.msg import PoseStamped, Pose, Point
 from igvc_msgs.msg import gps, velocity, motors, EKFState, imuodom, deltaodom
 from math import sin, cos, exp, pi, atan2
 import numpy as np
@@ -32,6 +34,16 @@ def draw_particles(particles):
     plt.draw()
     plt.pause(0.00000000001)
 
+def gps_point_to_xy_point(lat, lon, base_lat, base_lon):
+    pose_stamped = PoseStamped()
+    pose_stamped.pose = Pose()
+
+    point = Point()
+    point.x = (lat - base_lat) * 110984.8
+    point.y = (base_lon - lon) * 90994.1
+    pose_stamped.pose.position = point
+
+    return pose_stamped
 class Particle:
     def __init__(self, x=0, y=0, theta=0):
         self.x = x
@@ -44,7 +56,7 @@ class ParticleFilterNode:
 
     def __init__(self):
         # Parameters
-        self.num_particles = 100
+        self.num_particles = 720
 
         # ROS Setup
         # rospy.Subscriber("/igvc/velocity", velocity, self.velocity_callback)
@@ -57,7 +69,10 @@ class ParticleFilterNode:
 
         # rospy.Timer(rospy.Duration(self.dt), self.timer_callback)
 
-        self.particles = [Particle(0,0,random.random() * 2 * pi) for i in range(self.num_particles)]
+        # Uniformly distritube particles
+        self.particles = [Particle(0,0,i/self.num_particles * 2 * pi) for i in range(self.num_particles)]
+
+        self.global_path_pub = rospy.Publisher("/igvc/global_path", Path, queue_size=1)
 
         self.first_gps = None
 
@@ -73,7 +88,7 @@ class ParticleFilterNode:
         if SystemState(data.data) == SystemState.DISABLED:
             self.first_gps = None
             self.collecting_GPS = True
-            self.particles = [Particle(0,0,random.random()*2*pi) for i in range(self.num_particles)]
+            self.particles = [Particle(0,0,i/self.num_particles * 2 * pi) for i in range(self.num_particles)]
 
     def deltaodom_callback(self, data:deltaodom):
 
@@ -105,7 +120,7 @@ class ParticleFilterNode:
 
         if self.first_gps is not None:
             output_msg.latitude = self.first_gps[0] + avg_x / 110984.8
-            output_msg.longitude = self.first_gps[1] + avg_y / 90994.1
+            output_msg.longitude = self.first_gps[1] - avg_y / 90994.1
 
         self.state_pub.publish(output_msg)
 
@@ -119,6 +134,13 @@ class ParticleFilterNode:
                                     0.8 * self.first_gps[1] + 0.2 * data.longitude)
 
             return
+        else:
+            # Publish some GPS coords as waypoints
+            local_path = Path()
+            path = [(35.210514, -97.441929), (35.210634, -97.442109), (35.210634, -97.442325), (35.210477, -97.442324), (35.210477, -97.442117)]
+            local_path.poses = [gps_point_to_xy_point(path_point[0], path_point[1], self.first_gps[0], self.first_gps[1]) for path_point in path]
+
+            self.global_path_pub.publish(local_path)
 
         gps_x = (data.latitude - self.first_gps[0]) * 110984.8 # Approximations
         gps_y = (self.first_gps[1] - data.longitude) * 90994.1
@@ -126,7 +148,7 @@ class ParticleFilterNode:
         for particle in self.particles:
             dist_sqr = (particle.x - gps_x)**2 + (particle.y - gps_y)**2
 
-            particle.weight = exp(-dist_sqr / (2 * 0.5**2))
+            particle.weight = exp(-dist_sqr / (2 * 1**2))
 
         self.resample()
 
@@ -149,7 +171,7 @@ class ParticleFilterNode:
             # Sprinkle some random
             x = np.random.normal(particle.x, 0.5)
             y = np.random.normal(particle.y, 0.5)
-            theta = np.random.normal(particle.theta, 0.1)
+            theta = np.random.normal(particle.theta, 0.2)
 
             self.particles.append(Particle(x, y, theta))            
 

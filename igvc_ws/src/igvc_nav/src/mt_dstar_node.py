@@ -126,16 +126,16 @@ def c_space_callback(c_space):
 
 def path_point_to_global_pose_stamped(robot_pos, pp0, pp1, header):
     # Local path
-    x = (pp0 - robot_pos[0]) * GRID_SIZE
-    y = (pp1 - robot_pos[1]) * GRID_SIZE
+    x = (pp0 - 100) * camera_horizontal_distance / 200
+    y = (100 - pp1) * camera_vertical_distance / 100
 
     # Translate to global path
     dx = map_reference[0]
     dy = map_reference[1]
     psi = map_reference[2]
 
-    new_x = x * math.cos(psi) - y * math.sin(psi) + dx
-    new_y = -(y * math.cos(psi) + x * math.sin(psi)) + dy
+    new_x = x * math.cos(psi) + y * math.sin(psi) + dx
+    new_y = x * math.sin(psi) + y * math.cos(psi) + dy
 
     pose_stamped = PoseStamped(header=header)
     pose_stamped.pose = Pose()
@@ -269,11 +269,11 @@ def make_map(c_space):
 
         global_path = Path(header = header)
         global_path.poses = [path_point_to_global_pose_stamped(robot_pos, path_point[0], path_point[1], header) for path_point in path]
-        global_path.poses.reverse() # reverse path becuz its backwards lol
+        # global_path.poses.reverse() # reverse path becuz its backwards lol
 
         local_path = Path(header = header)
         local_path.poses = [path_point_to_local_pose_stamped(path_point[0], path_point[1], header) for path_point in path]
-        local_path.poses.reverse() # reverse path becuz its backwards lol
+        # local_path.poses.reverse() # reverse path becuz its backwards lol
 
         # global_path_pub.publish(global_path)
         local_path_pub.publish(local_path)
@@ -305,7 +305,7 @@ def mt_dstar_node():
         rospy.Subscriber("/igvc/state", EKFState, ekf_callback)
 
     # Make a timer to publish new paths
-    timer = rospy.Timer(rospy.Duration(secs=0.1), make_map, oneshot=False)
+    timer = rospy.Timer(rospy.Duration(secs=0.15), make_map, oneshot=False)
 
     # if SHOW_PLOTS:
     setup_pyplot()

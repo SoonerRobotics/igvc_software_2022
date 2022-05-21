@@ -24,7 +24,7 @@ height_offset = 58
 captured_width = 70
 captured_height = 50
 
-frame_rate = 10.0 # Hz
+frame_rate = 8.0 # Hz
 
 preview_pub = rospy.Publisher("/igvc/preview", Image, queue_size=1)
 image_pub = rospy.Publisher("/igvc/lane_map", OccupancyGrid, queue_size=1)

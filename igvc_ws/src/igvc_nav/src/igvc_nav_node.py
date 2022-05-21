@@ -62,17 +62,12 @@ def true_pose_callback(data):
         heading += 360
 
 def global_path_update(data):
-    points = [Point(0,0), Point(1,0), Point(1,-1), Point(0,-1), Point(0,0)] # Get points from Path
+    points = [x.pose.position for x in data.poses] # Get points from Path
     pp.set_points([(_point.x, _point.y) for _point in points]) # Give PurePursuit the points
 
-def get_angle_diff(angle1, angle2):
-    delta = angle1 - angle2
-
-    # Account for cases when angles are very close or far
-    if delta > math.pi:
-        delta -= 2 * math.pi
-    elif delta < 0:
-        delta += 2 * math.pi
+def get_angle_diff(to_angle, from_angle):
+    delta = to_angle - from_angle
+    delta = (delta + math.pi) % (2 * math.pi) - math.pi
     
     return delta
 
@@ -121,13 +116,13 @@ def timer_callback(event):
         #     error = 0
 
         # Base forward velocity for both wheels
-        forward_speed = 0.35 * (1 - abs(error))**5
+        forward_speed = 0.50 * (1 - abs(error))**5
 
         # Define wheel linear velocities
         # Add proprtional error for turning.
         # TODO: PID instead of just P
-        motor_pkt.left = (forward_speed - clamp(1.0 * error, -0.25, 0.25))
-        motor_pkt.right = (forward_speed + clamp(1.0 * error, -0.25, 0.25))
+        motor_pkt.left = (forward_speed - clamp(0.5 * error, -0.25, 0.25))
+        motor_pkt.right = (forward_speed + clamp(0.5 * error, -0.25, 0.25))
 
     else:
         # We couldn't find a suitable direction to head, stop the robot.
@@ -146,9 +141,6 @@ def timer_callback(event):
 def nav():
     rospy.init_node('nav_node', anonymous=True)
 
-    points = [Point(0,0,0), Point(1,0,0), Point(1,-1,0), Point(2,-1,0), Point(2,-2,0), Point(0,-2,0), Point(0,-3,0)] # Get points from Path
-    pp.set_points([(_point.x, _point.y) for _point in points]) # Give PurePursuit the points
-
     if USE_SIM_TRUTH:
         rospy.Subscriber("/sim/true_pose", Pose, true_pose_callback)
     else:
@@ -157,7 +149,7 @@ def nav():
     rospy.Subscriber("/igvc/global_path", Path, global_path_update)
     rospy.Subscriber("/igvc/system_state", Int16, system_state_callback)
 
-    rospy.Timer(rospy.Duration(0.04), timer_callback)
+    rospy.Timer(rospy.Duration(0.05), timer_callback)
 
     if SHOW_PLOTS:
         setup_pyplot()

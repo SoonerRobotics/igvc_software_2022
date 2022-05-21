@@ -22,6 +22,7 @@ from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg
 from matplotlib.figure import Figure
 import matplotlib.animation as animation
 
+import time
 
 from pygame import mixer
 
@@ -69,7 +70,7 @@ class IGVCWindow(QMainWindow):
         self.vlayout = QVBoxLayout()
         self.hlayout.addLayout(self.vlayout, stretch=1)
 
-        self.path_canvas = IGVCPathCanvas(self, width=2, height=2, dpi=200)
+        self.path_canvas = IGVCPathCanvas(self, width=1, height=1, dpi=120)
         self.hlayout.addWidget(self.path_canvas, stretch=1)
 
         self.system_state_label = QLabel(self)
@@ -106,12 +107,12 @@ class IGVCWindow(QMainWindow):
         self.setCentralWidget(self.centralWidget)
 
         # # Setup draw timer
-        # self.timer = QTimer()
-        # self.timer.setInterval(300)
-        # self.timer.timeout.connect(self.draw_timer)
-        # self.timer.start()
+        self.timer = QTimer()
+        self.timer.setInterval(200)
+        self.timer.timeout.connect(self.draw_timer)
+        self.timer.start()
 
-        self.ani =  animation.FuncAnimation(self.path_canvas.fig, self.draw, interval=100)
+        # self.ani = animation.FuncAnimation(self.path_canvas.fig, self.draw, interval=1000)
 
         self.curMap = None
         self.lastEKF = None
@@ -121,6 +122,7 @@ class IGVCWindow(QMainWindow):
         self.mobi_start = False
         self.dead_rekt_cum = (0,0,0)
         self.last_image = None
+        self.first_draw = True
 
         # self.cam = cv2.VideoCapture(0)
 
@@ -146,19 +148,29 @@ class IGVCWindow(QMainWindow):
 
         self.first_gps = None
 
-    def draw(self, i):
+    def draw(self):
         if self.curMap is not None and self.lastEKF is not None:
-            self.path_canvas.axes.clear()
+            self.path_canvas.axes.cla()
 
             self.path_canvas.axes.imshow(self.last_image, interpolation = 'none', extent=[-camera_horizontal_distance/2, camera_horizontal_distance/2, 0, camera_vertical_distance])
-
             map_mat = np.reshape(self.curMap, (100, 200))
-            norm = plt.colors.Normalize()
-            colors = plt.cm.jet(norm(map_mat))
-            colors[:,:,3] = 0.5
-            colors[map_mat == 0,3] = 0
 
-            self.path_canvas.axes.imshow(colors, interpolation = 'none', extent=[-camera_horizontal_distance/2, camera_horizontal_distance/2, 0, camera_vertical_distance])
+            if self.first_draw:
+                self.path_canvas.axes.set_ylabel('x (m)')
+                self.path_canvas.axes.set_xlabel('y (m)')
+
+                self.path_canvas.axes.set_xlim(-camera_horizontal_distance/2, camera_horizontal_distance/2)
+                self.path_canvas.axes.set_ylim(0, camera_vertical_distance)
+
+                self.norm = plt.colors.Normalize()
+
+                self.first_draw = False
+
+            self.colors = plt.cm.jet(self.norm(map_mat))
+            self.colors[:,:,3] = 0.5
+            self.colors[map_mat == 0,3] = 0
+
+            self.path_canvas.axes.imshow(self.colors, interpolation = 'none', extent=[-camera_horizontal_distance/2, camera_horizontal_distance/2, 0, camera_vertical_distance])
 
             # # Zoom into -5m to 5m
             
@@ -169,19 +181,12 @@ class IGVCWindow(QMainWindow):
             robot_pos = (self.lastEKF.x - self.ekfAtMap[0], self.lastEKF.y - self.ekfAtMap[1])
             self.path_canvas.axes.plot(robot_pos[0], robot_pos[1], '.', markersize=16, color="black")
 
-            self.path_canvas.axes.set_ylabel('x (m)')
-            self.path_canvas.axes.set_xlabel('y (m)')
-
-            # self.path_canvas.axes.set_xlim(-5, 5)
-            # self.path_canvas.axes.set_ylim(0, 5)
-
             # yes, pic = self.cam.read()
 
             # if yes:
             #     self.path_canvas.axes2.imshow(pic)
 
-            self.path_canvas.draw()
-
+            self.path_canvas.draw_idle()
 
     def draw_timer(self):
         if rospy.is_shutdown():

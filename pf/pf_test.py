@@ -9,7 +9,7 @@ pf = pf.ParticleFilter(num_particles=400, gps_noise=[0.2], odom_noise=[0.1, 0.2,
 test_file = "pf_test_20220520-185151.csv"
 test_noend = test_file.split(".")[0]
 
-display_particles = False
+display_particles = True
 
 if not os.path.exists(f'plots/{test_noend}'):
     os.makedirs(f'plots/{test_noend}')
@@ -44,7 +44,7 @@ with open(test_file,"r") as file:
             gps_xpoints.append(gps_x)
             gps_ypoints.append(gps_y)
 
-        elif not np.isnan(row['dr_x']):
+        if not np.isnan(row['dr_x']):
             # Odom
             odom_data = odom(row['dr_x'], row['dr_y'], row['dr_theta'])
             avg_x, avg_y, avg_theta = pf.update_odom(odom_data, display_details)

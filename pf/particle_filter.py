@@ -4,6 +4,7 @@ from math import sin, cos, exp, pi, atan2
 import numpy as np
 import random
 import matplotlib.pyplot as plt
+import graphics
 
 class Particle:
     def __init__(self, x=0, y=0, theta=0):
@@ -48,10 +49,10 @@ class ParticleFilter:
             particle.theta += data.delta_theta
             particle.theta = particle.theta % (2 * pi)
 
-            sum_x += particle.x#*particle.weight
-            sum_y += particle.y#*particle.weight
-            sum_theta_x += cos(particle.theta)#*particle.weight
-            sum_theta_y += sin(particle.theta)#*particle.weight
+            sum_x += particle.x
+            sum_y += particle.y
+            sum_theta_x += cos(particle.theta)
+            sum_theta_y += sin(particle.theta)
 
         # Report current average of particles
         avg_x = sum_x / self.num_particles
@@ -75,18 +76,22 @@ class ParticleFilter:
 
         dif_x = gps_x - self.last_gps[0]
         dif_y = gps_y - self.last_gps[1]
-        theta = atan2(dif_x, dif_y)
+        theta = atan2(dif_x, dif_y)%(2*pi)
 
         for particle in self.particles:
             dist_sqr = np.sqrt((particle.x - gps_x)**2 + (particle.y - gps_y)**2)
+
             dif_x_part = (particle.x - gps_x)
-            dif_y_part = particle.y - gps_y
-            theta_part = atan2(dif_x_part, dif_y_part)
-            theta_sqr = np.sqrt((theta_part- theta)**2)
+            dif_y_part = (particle.y - gps_y)
+            theta_part = atan2(dif_x_part, dif_y_part)%(2*pi)
+            theta_sqr = ((theta_part-theta)**2)%(2*pi)
 
-            #dist_sqr *= theta_sqr
+            # dist_sqr *= (5*theta_sqr) # trying to add in theta heading to weighting, not just gps loc
 
-            particle.weight = exp(-dist_sqr / (2 * self.gps_noise[0]**2))
+            #particle.weight = exp(-dist_sqr / (2 * self.gps_noise[0]**2))
+            particle.weight = exp(-((dif_x_part**2/(2 * self.gps_noise[0]**2))
+                                    +(dif_y_part**2/(2 * self.gps_noise[0]**2))
+                                    +(theta_sqr/(2 * self.odom_noise[2]**2))))
 
         if (display_bool):
             display_particles(self,f'plots/{test_file}/{i}_0before_resample.png')
@@ -130,11 +135,13 @@ def display_particles(self, filename):
         weight.append(particle.weight)
 
 
-    u, v = (np.cos(theta), np.sin(theta))
+    u, v = (weight*np.cos(theta), weight*np.sin(theta))
+    weight = [float(w*10) for w in weight]
 
     plt.cla()
-    plt.quiver(xpoints, ypoints, u, v, linewidths=1, scale=40, label='PF', color='blue')
+    plt.quiver(xpoints, ypoints, u, v, linewidths=1, label='PF', color='blue')
     plt.xlim(-5, 15)
     plt.ylim(-5,15)
     plt.savefig(filename)
+
 

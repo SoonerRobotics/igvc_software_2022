@@ -3,6 +3,8 @@
 from math import sin, cos, exp, pi, atan2
 import numpy as np
 import random
+import matplotlib.pyplot as plt
+
 
 class Particle:
     def __init__(self, x=0, y=0, theta=0):
@@ -13,7 +15,6 @@ class Particle:
         self.weight = 1
 
 class ParticleFilter:
-
     def __init__(self, num_particles=720, gps_noise=None, odom_noise=None):
         # Parameters
         self.num_particles = num_particles
@@ -58,8 +59,7 @@ class ParticleFilter:
 
         return (avg_x, avg_y, avg_theta)
 
-    def update_gps(self, data):
-
+    def update_gps(self, data, i, test_file,display_bool):
         if self.first_gps is None:
             self.first_gps = (data.latitude, data.longitude)
 
@@ -71,7 +71,12 @@ class ParticleFilter:
 
             particle.weight = exp(-dist_sqr / (2 * self.gps_noise[0]**2))
 
-        self.resample()
+        if (display_bool):
+            display_particles(self,f'plots/{test_file}/{i}_0before_resample.png')
+            self.resample()
+            display_particles(self,f'plots/{test_file}/{i}_1after_resample.png')
+        else:
+            self.resample()
         return (gps_x, gps_y)
 
     def resample(self):
@@ -91,3 +96,24 @@ class ParticleFilter:
             theta = np.random.normal(particle.theta, self.odom_noise[2])
 
             self.particles.append(Particle(x, y, theta))            
+
+def display_particles(self, filename):
+    xpoints = []
+    ypoints = []
+    theta = []
+    weight = []
+
+    for particle in self.particles:
+        xpoints.append(particle.x)
+        ypoints.append(particle.y)
+        theta.append(particle.theta)
+        weight.append(particle.weight)
+
+
+    u, v = (np.cos(theta), np.sin(theta))
+
+    plt.quiver(xpoints, ypoints, u, v, linewidths=1, label='PF', color='blue')
+    plt.xlim(-5, 15)
+    plt.ylim(-5,15)
+    plt.savefig(filename)
+

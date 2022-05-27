@@ -149,44 +149,45 @@ class IGVCWindow(QMainWindow):
         self.first_gps = None
 
     def draw(self):
-        if self.curMap is not None and self.lastEKF is not None:
-            self.path_canvas.axes.cla()
+        # if self.curMap is not None and self.lastEKF is not None:
+        #     self.path_canvas.axes.cla()
 
-            self.path_canvas.axes.imshow(self.last_image, interpolation = 'none', extent=[-camera_horizontal_distance/2, camera_horizontal_distance/2, 0, camera_vertical_distance])
-            map_mat = np.reshape(self.curMap, (100, 200))
+        #     self.path_canvas.axes.imshow(self.last_image, interpolation = 'none', extent=[-camera_horizontal_distance/2, camera_horizontal_distance/2, 0, camera_vertical_distance])
+        #     map_mat = np.reshape(self.curMap, (100, 200))
 
-            if self.first_draw:
-                self.path_canvas.axes.set_ylabel('x (m)')
-                self.path_canvas.axes.set_xlabel('y (m)')
+        #     if self.first_draw:
+        #         self.path_canvas.axes.set_ylabel('x (m)')
+        #         self.path_canvas.axes.set_xlabel('y (m)')
 
-                self.path_canvas.axes.set_xlim(-camera_horizontal_distance/2, camera_horizontal_distance/2)
-                self.path_canvas.axes.set_ylim(0, camera_vertical_distance)
+        #         self.path_canvas.axes.set_xlim(-camera_horizontal_distance/2, camera_horizontal_distance/2)
+        #         self.path_canvas.axes.set_ylim(0, camera_vertical_distance)
 
-                self.norm = plt.colors.Normalize()
+        #         self.norm = plt.colors.Normalize()
 
-                self.first_draw = False
+        #         self.first_draw = False
 
-            self.colors = plt.cm.jet(self.norm(map_mat))
-            self.colors[:,:,3] = 0.5
-            self.colors[map_mat == 0,3] = 0
+        #     self.colors = plt.cm.jet(self.norm(map_mat))
+        #     self.colors[:,:,3] = 0.5
+        #     self.colors[map_mat == 0,3] = 0
 
-            self.path_canvas.axes.imshow(self.colors, interpolation = 'none', extent=[-camera_horizontal_distance/2, camera_horizontal_distance/2, 0, camera_vertical_distance])
+        #     self.path_canvas.axes.imshow(self.colors, interpolation = 'none', extent=[-camera_horizontal_distance/2, camera_horizontal_distance/2, 0, camera_vertical_distance])
 
-            # # Zoom into -5m to 5m
+        #     # # Zoom into -5m to 5m
             
-            for pose in self.path.poses:
-                point = (pose.pose.position.x, pose.pose.position.y)
-                self.path_canvas.axes.plot(point[0], point[1], '.', markersize=8, color="red")
+        #     for pose in self.path.poses:
+        #         point = (pose.pose.position.x, pose.pose.position.y)
+        #         self.path_canvas.axes.plot(point[0], point[1], '.', markersize=8, color="red")
 
-            robot_pos = (self.lastEKF.x - self.ekfAtMap[0], self.lastEKF.y - self.ekfAtMap[1])
-            self.path_canvas.axes.plot(robot_pos[0], robot_pos[1], '.', markersize=16, color="black")
+        #     robot_pos = (self.lastEKF.x - self.ekfAtMap[0], self.lastEKF.y - self.ekfAtMap[1])
+        #     self.path_canvas.axes.plot(robot_pos[0], robot_pos[1], '.', markersize=16, color="black")
 
-            # yes, pic = self.cam.read()
+        #     # yes, pic = self.cam.read()
 
-            # if yes:
-            #     self.path_canvas.axes2.imshow(pic)
+        #     # if yes:
+        #     #     self.path_canvas.axes2.imshow(pic)
 
-            self.path_canvas.draw_idle()
+        #     self.path_canvas.draw_idle()
+        pass
 
     def draw_timer(self):
         if rospy.is_shutdown():
@@ -213,10 +214,6 @@ class IGVCWindow(QMainWindow):
         self.dead_rekt_cum = (x + data.delta_x * cos(theta) + data.delta_y * sin(theta), y + data.delta_x * sin(theta) + data.delta_y * cos(theta), theta + data.delta_theta)
         self.dead_rekt_label.setText(f"Dead rekt: {self.dead_rekt_cum[0]:0.02f},{self.dead_rekt_cum[1]:0.02f},{self.dead_rekt_cum[2]:0.02f}")
 
-        # timestamp, gps_lat, gps_lon, pf_lat, pf_lon, pf_x, pf_y, dr_x, dr_y
-        if self.mobi_start:
-            self.csvwriter.writerow([rospy.Time.now(),None,None,None,None,None,None,data.delta_x,data.delta_y,data.delta_theta])
-
     def system_state_callback(self, data):
         self.system_state = SystemState(data.data)
         self.system_state_label.setText(f"System State: {self.system_state.name}\nMobility: {'Start' if self.mobi_start else 'Stop'}")
@@ -238,15 +235,10 @@ class IGVCWindow(QMainWindow):
         if data.hasSignal and self.mobi_start:
             if self.first_gps == None:
                 self.first_gps = (data.latitude, data.longitude)
-            self.csvwriter.writerow([rospy.Time.now(),data.latitude,data.longitude,None,None,None,None,None,None,None])
 
     def ekf_callback(self, data):
         self.lastEKF = data
         self.pose_label.setText(f"Pose: {data.x:0.01f}m, {data.y:0.01f}m\n\t{data.yaw * 180/3.14:0.01f}°\n\t{data.latitude:0.06f}, {data.longitude:0.06f}")
-
-        # timestamp, gps_lat, gps_lon, pf_lat, pf_lon, pf_x, pf_y, dr_x, dr_y
-        if self.mobi_start:
-            self.csvwriter.writerow([rospy.Time.now(),None,None,data.latitude,data.longitude,data.x,data.y,None,None,None])
 
     def c_space_callback(self, data):
         if self.lastEKF:

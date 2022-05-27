@@ -83,9 +83,9 @@ class VelocityCANReadThread(threading.Thread):
                 # velPkt.rightVel = -left_speed / 127 * max_speed / 10
 
                 odom_pkt = deltaodom()
-                odom_pkt.delta_x = -delta_x * 0.0001
-                odom_pkt.delta_y = delta_y * 0.0001
-                odom_pkt.delta_theta = 2 * delta_theta * 0.0001
+                odom_pkt.delta_x = -delta_x * 0.00002
+                odom_pkt.delta_y = delta_y * 0.00002
+                odom_pkt.delta_theta = 2 * delta_theta * 0.00002
                 
                 # print(f"odom: ({delta_x:0.03f},{delta_y:0.03f},{delta_theta:0.03f})")
                 

@@ -87,7 +87,7 @@ def timer_callback(event):
     lookahead = None
     radius = 0.3 # Starting radius
 
-    while lookahead is None and radius <= 3: # Look until we hit 3 meters max
+    while lookahead is None and radius <= 4: # Look until we hit 3 meters max
         lookahead = pp.get_lookahead_point(cur_pos[0], cur_pos[1], radius)
         radius *= 1.2
 

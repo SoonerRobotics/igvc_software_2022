@@ -10,6 +10,7 @@ from math import sin, cos, exp, pi, atan2
 import numpy as np
 import random
 from enum import Enum
+import particle_filter as pf
 
 import matplotlib as mpl
 from matplotlib import pyplot as plt
@@ -56,7 +57,7 @@ class ParticleFilterNode:
 
     def __init__(self):
         # Parameters
-        self.num_particles = 720
+        self.PF = pf.ParticleFilter(num_particles=500, gps_noise=[0.6], odom_noise=[0.05, 0.05, 0.1])
 
         # ROS Setup
         # rospy.Subscriber("/igvc/velocity", velocity, self.velocity_callback)
@@ -69,13 +70,9 @@ class ParticleFilterNode:
 
         # rospy.Timer(rospy.Duration(self.dt), self.timer_callback)
 
-        # Uniformly distritube particles
-        self.particles = [Particle(0,0,i/self.num_particles * 2 * pi) for i in range(self.num_particles)]
-
         self.global_path_pub = rospy.Publisher("/igvc/global_path", Path, queue_size=1)
 
         self.first_gps = None
-
         self.collecting_GPS = True
 
     def mobi_start_callback(self, data:Bool):
@@ -88,30 +85,11 @@ class ParticleFilterNode:
         if SystemState(data.data) == SystemState.DISABLED:
             self.first_gps = None
             self.collecting_GPS = True
-            self.particles = [Particle(0,0,i/self.num_particles * 2 * pi) for i in range(self.num_particles)]
+            self.PF.init_particles()
 
     def deltaodom_callback(self, data:deltaodom):
 
-        sum_x = 0
-        sum_y = 0
-        sum_theta_x = 0
-        sum_theta_y = 0
-
-        for particle in self.particles:
-            particle.x += data.delta_x * cos(particle.theta) + data.delta_y * sin(particle.theta)
-            particle.y += data.delta_x * sin(particle.theta) + data.delta_y * cos(particle.theta)
-            particle.theta += data.delta_theta
-            particle.theta = particle.theta % (2 * pi)
-
-            sum_x += particle.x
-            sum_y += particle.y
-            sum_theta_x += cos(particle.theta)
-            sum_theta_y += sin(particle.theta)
-
-        # Report current average of particles
-        avg_x = sum_x / self.num_particles
-        avg_y = sum_y / self.num_particles
-        avg_theta = atan2(sum_theta_y / self.num_particles, sum_theta_x / self.num_particles) % (2 * pi)
+        avg_x, avg_y, avg_theta = self.PF.update_odom(data)
 
         output_msg = EKFState()
         output_msg.x = avg_x
@@ -132,48 +110,17 @@ class ParticleFilterNode:
             else:
                 self.first_gps = (0.8 * self.first_gps[0] + 0.2 * data.latitude,
                                     0.8 * self.first_gps[1] + 0.2 * data.longitude)
-
+            self.PF.set_first_gps(self.first_gps)
             return
         else:
             # Publish some GPS coords as waypoints
             local_path = Path()
-            path = [(35.210514, -97.441929), (35.210634, -97.442109), (35.210634, -97.442325), (35.210477, -97.442324), (35.210477, -97.442117)]
+            path = [(35.2105295, -97.4419748), (35.2106288, -97.4421037), (35.210634, -97.442325), (35.210477, -97.442324), (35.210477, -97.442117)]
             local_path.poses = [gps_point_to_xy_point(path_point[0], path_point[1], self.first_gps[0], self.first_gps[1]) for path_point in path]
 
             self.global_path_pub.publish(local_path)
 
-        gps_x = (data.latitude - self.first_gps[0]) * 110984.8 # Approximations
-        gps_y = (self.first_gps[1] - data.longitude) * 90994.1
-
-        for particle in self.particles:
-            dist_sqr = (particle.x - gps_x)**2 + (particle.y - gps_y)**2
-
-            particle.weight = exp(-dist_sqr / (2 * 1**2))
-
-        self.resample()
-
-    def timer_callback(self, time):
-        self.kinematic_update()
-
-    def resample(self):
-        weights = [particle.weight for particle in self.particles]
-        weights_sum = sum(weights)
-        if weights_sum < 0.00001:
-            weights_sum = 0.00001
-        weights = [weight / weights_sum for weight in weights]
-
-        print(f"Confidence: {weights_sum}")
-
-        new_particles = random.choices(self.particles, weights, k=self.num_particles)
-        self.particles = []
-
-        for particle in new_particles:
-            # Sprinkle some random
-            x = np.random.normal(particle.x, 0.5)
-            y = np.random.normal(particle.y, 0.5)
-            theta = np.random.normal(particle.theta, 0.2)
-
-            self.particles.append(Particle(x, y, theta))            
+        self.PF.update_gps(data)      
 
 
 def main():

@@ -15,7 +15,7 @@ class DataLogger:
         rospy.Subscriber("/igvc/gps", gps, self.gps_callback)
         rospy.Subscriber("/igvc/mobstart", Bool, self.mobi_start_callback)
 
-        self.csvfile = open(f"/home/igvc/igvc_data/pf_test_{datetime.now().strftime('%Y%m%d-%H%M%S')}.csv", "w")
+        self.csvfile = open(f"/home/igvc/igvc_data/datalog_{datetime.now().strftime('%Y%m%d-%H%M%S')}.csv", "w")
         self.csvwriter = csv.writer(self.csvfile)
 
         # self.csvwriter.writerow("timestamp, gps_lat, gps_lon, pf_lat, pf_lon, pf_x, pf_y, dr_x, dr_y")

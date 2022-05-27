@@ -8,7 +8,6 @@ from sensor_msgs.msg import Image
 from std_msgs.msg import Int16, Bool
 from math import sin, cos
 from datetime import datetime
-import csv
 
 import sys
 import PyQt5 as Qt
@@ -139,12 +138,6 @@ class IGVCWindow(QMainWindow):
         rospy.Subscriber("/igvc/system_state", Int16, self.system_state_callback)
         rospy.Subscriber("/igvc/mobstart", Bool, self.mobi_start_callback)
         rospy.Subscriber("/igvc/preview", Image, self.image_callback)
-
-        self.csvfile = open(f"/home/igvc/igvc_data/pf_test_{datetime.now().strftime('%Y%m%d-%H%M%S')}.csv", "w")
-        self.csvwriter = csv.writer(self.csvfile)
-
-        # self.csvwriter.writerow("timestamp, gps_lat, gps_lon, pf_lat, pf_lon, pf_x, pf_y, dr_x, dr_y")
-        self.csvwriter.writerow(["timestamp","gps_lat","gps_lon","pf_lat","pf_lon","pf_x","pf_y","dr_x","dr_y","dr_theta"])
 
         self.first_gps = None
 

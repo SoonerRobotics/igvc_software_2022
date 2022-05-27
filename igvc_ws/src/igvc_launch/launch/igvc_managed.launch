@@ -2,6 +2,9 @@
     <!-- Manager -->
     <node name="system_manager" pkg="igvc_launch" type="system_manager.py" output="screen" required="true"/>
 
+    <!-- Logging -->
+    <node name="data_logger" pkg="igvc_launch" type="data_logger.py" output="screen"/>
+
     <!-- Configure the robot -->
     <include file="$(find igvc_launch)/launch/config/igvc_robot_config.launch" />
 

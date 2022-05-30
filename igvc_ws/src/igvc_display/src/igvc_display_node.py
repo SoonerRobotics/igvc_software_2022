@@ -126,7 +126,7 @@ class IGVCWindow(QMainWindow):
         # self.cam = cv2.VideoCapture(0)
 
         # Setup Music
-        mixer.music.load('/home/igvc/music/genki_dama.wav')
+        mixer.music.load('/home/igvc/music/boomersooner.wav')
 
         # Subscribe to necessary topics
         rospy.Subscriber("/igvc_slam/local_config_space", OccupancyGrid, self.c_space_callback, queue_size=1)
@@ -142,45 +142,46 @@ class IGVCWindow(QMainWindow):
         self.first_gps = None
 
     def draw(self):
-        # if self.curMap is not None and self.lastEKF is not None:
-        #     self.path_canvas.axes.cla()
+        if self.curMap is not None and self.lastEKF is not None:
+            self.path_canvas.axes.cla()
 
-        #     self.path_canvas.axes.imshow(self.last_image, interpolation = 'none', extent=[-camera_horizontal_distance/2, camera_horizontal_distance/2, 0, camera_vertical_distance])
-        #     map_mat = np.reshape(self.curMap, (100, 200))
+            self.path_canvas.axes.imshow(self.last_image, interpolation = 'none', extent=[-camera_horizontal_distance/2, camera_horizontal_distance/2, 0, camera_vertical_distance])
+            map_mat = np.reshape(self.curMap, (100, 200))
 
-        #     if self.first_draw:
-        #         self.path_canvas.axes.set_ylabel('x (m)')
-        #         self.path_canvas.axes.set_xlabel('y (m)')
+            # if self.first_draw:
+            self.path_canvas.axes.set_ylabel('x (m)')
+            self.path_canvas.axes.set_xlabel('y (m)')
 
-        #         self.path_canvas.axes.set_xlim(-camera_horizontal_distance/2, camera_horizontal_distance/2)
-        #         self.path_canvas.axes.set_ylim(0, camera_vertical_distance)
+            self.path_canvas.axes.set_xlim(-camera_horizontal_distance/2, camera_horizontal_distance/2)
+            self.path_canvas.axes.set_ylim(0, camera_vertical_distance)
 
-        #         self.norm = plt.colors.Normalize()
+            self.norm = plt.colors.Normalize()
 
-        #         self.first_draw = False
+            # self.first_draw = False
 
-        #     self.colors = plt.cm.jet(self.norm(map_mat))
-        #     self.colors[:,:,3] = 0.5
-        #     self.colors[map_mat == 0,3] = 0
+            self.colors = plt.cm.jet(self.norm(map_mat))
+            self.colors[:,:,3] = 0.5
+            self.colors[map_mat == 0,3] = 0
 
-        #     self.path_canvas.axes.imshow(self.colors, interpolation = 'none', extent=[-camera_horizontal_distance/2, camera_horizontal_distance/2, 0, camera_vertical_distance])
+            self.path_canvas.axes.imshow(self.colors, interpolation = 'none', extent=[-camera_horizontal_distance/2, camera_horizontal_distance/2, 0, camera_vertical_distance])
 
-        #     # # Zoom into -5m to 5m
+            # # Zoom into -5m to 5m
             
-        #     for pose in self.path.poses:
-        #         point = (pose.pose.position.x, pose.pose.position.y)
-        #         self.path_canvas.axes.plot(point[0], point[1], '.', markersize=8, color="red")
+            if self.path:
+                for pose in self.path.poses:
+                    point = (pose.pose.position.x, pose.pose.position.y)
+                    self.path_canvas.axes.plot(-point[1], point[0], '.', markersize=8, color="red")
 
-        #     robot_pos = (self.lastEKF.x - self.ekfAtMap[0], self.lastEKF.y - self.ekfAtMap[1])
-        #     self.path_canvas.axes.plot(robot_pos[0], robot_pos[1], '.', markersize=16, color="black")
+            # robot_pos = (self.lastEKF.x - self.ekfAtMap[0], self.lastEKF.y - self.ekfAtMap[1])
+            # self.path_canvas.axes.plot(robot_pos[1], robot_pos[0], '.', markersize=16, color="black")
 
-        #     # yes, pic = self.cam.read()
+            # yes, pic = self.cam.read()
 
-        #     # if yes:
-        #     #     self.path_canvas.axes2.imshow(pic)
+            # if yes:
+            #     self.path_canvas.axes2.imshow(pic)
 
-        #     self.path_canvas.draw_idle()
-        pass
+            self.path_canvas.draw_idle()
+        # pass
 
     def draw_timer(self):
         if rospy.is_shutdown():
@@ -195,7 +196,7 @@ class IGVCWindow(QMainWindow):
         self.system_state_label.setText(f"System State: {self.system_state.name}\nMobility: {'Start' if self.mobi_start else 'Stop'}")
 
         if data.data == True and self.system_state == SystemState.AUTONOMOUS:
-            mixer.music.play()
+            mixer.music.play(-1)
 
         if data.data == False:
             mixer.music.stop()

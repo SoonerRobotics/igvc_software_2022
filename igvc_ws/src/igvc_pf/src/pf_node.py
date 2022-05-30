@@ -15,6 +15,10 @@ import particle_filter as pf
 import matplotlib as mpl
 from matplotlib import pyplot as plt
 
+# Config
+
+ALWAYS_ZERO_HEADING = True
+
 class SystemState(Enum):
     DISABLED = 0
     MANUAL = 1
@@ -94,7 +98,7 @@ class ParticleFilterNode:
         output_msg = EKFState()
         output_msg.x = avg_x
         output_msg.y = avg_y
-        output_msg.yaw = avg_theta
+        output_msg.yaw = avg_theta if not ALWAYS_ZERO_HEADING else 0.0
 
         if self.first_gps is not None:
             output_msg.latitude = self.first_gps[0] + avg_x / 110984.8
@@ -112,13 +116,13 @@ class ParticleFilterNode:
                                     0.8 * self.first_gps[1] + 0.2 * data.longitude)
             self.PF.set_first_gps(self.first_gps)
             return
-        else:
-            # Publish some GPS coords as waypoints
-            local_path = Path()
-            path = [(35.2105295, -97.4419748), (35.2106288, -97.4421037), (35.210634, -97.442325), (35.210477, -97.442324), (35.210477, -97.442117)]
-            local_path.poses = [gps_point_to_xy_point(path_point[0], path_point[1], self.first_gps[0], self.first_gps[1]) for path_point in path]
+        # else:
+        #     # Publish some GPS coords as waypoints
+        #     local_path = Path()
+        #     path = [(35.2105295, -97.4419748), (35.2106288, -97.4421037), (35.210634, -97.442325), (35.210477, -97.442324), (35.210477, -97.442117)]
+        #     local_path.poses = [gps_point_to_xy_point(path_point[0], path_point[1], self.first_gps[0], self.first_gps[1]) for path_point in path]
 
-            self.global_path_pub.publish(local_path)
+        #     self.global_path_pub.publish(local_path)
 
         self.PF.update_gps(data)      
 

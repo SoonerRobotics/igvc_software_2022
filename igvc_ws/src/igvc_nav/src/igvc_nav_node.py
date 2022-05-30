@@ -22,7 +22,7 @@ system_state = SystemState.DISABLED
 sys.stdout.reconfigure(line_buffering=True)
 
 
-SHOW_PLOTS = False
+SHOW_PLOTS = True
 USE_SIM_TRUTH = False
 
 pos = None
@@ -85,7 +85,7 @@ def timer_callback(event):
     cur_pos = (pos[0], pos[1])
 
     lookahead = None
-    radius = 0.3 # Starting radius
+    radius = 0.6 # Starting radius
 
     while lookahead is None and radius <= 4: # Look until we hit 3 meters max
         lookahead = pp.get_lookahead_point(cur_pos[0], cur_pos[1], radius)
@@ -116,7 +116,7 @@ def timer_callback(event):
         #     error = 0
 
         # Base forward velocity for both wheels
-        forward_speed = 0.50 * (1 - abs(error))**5
+        forward_speed = 0.20 * (1 - abs(error))**5
 
         # Define wheel linear velocities
         # Add proprtional error for turning.

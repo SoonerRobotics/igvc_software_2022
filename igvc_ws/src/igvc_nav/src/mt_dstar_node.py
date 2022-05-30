@@ -97,7 +97,7 @@ def c_space_callback(c_space):
             # - Positive Y value (discourage left/right)
             # - Depth (number of breath-first search iterations)
             # - Config space cost
-            cost = (100 - y) + -abs(x - 100) + depth - grid_data[x + y * 200]
+            cost = (100 - y) + depth * 4
             if cost > best_pos_cost:
                 best_pos_cost = cost
                 temp_best_pos = pos
@@ -106,15 +106,13 @@ def c_space_callback(c_space):
             explored.add(pos[1] * 100 + pos[0])
 
             # Look left/right for good points
-            if y < 99 and grid_data[x + 200 * (y+1)] != 100 and x + 200 * (y+1) not in explored:
-                frontier.add((x, y+1))
-            if y > 0 and grid_data[x + 200 * (y-1)] != 100 and x + 200 * (y-1) not in explored:
+            if y > 0 and grid_data[x + 200 * (y-1)] == 0 and x + 200 * (y-1) not in explored:
                 frontier.add((x, y-1))
 
             # Look forward/back for good points
-            if x < 199 and grid_data[x + 1 + 200 * y] != 100 and x + 1 + 200 * y not in explored:
+            if x < 199 and grid_data[x + 1 + 200 * y] == 0 and x + 1 + 200 * y not in explored:
                 frontier.add((x+1, y))
-            if x > 0 and grid_data[x - 1 + 200 * y] != 100 and x - 1 + 200 * y not in explored:
+            if x > 0 and grid_data[x - 1 + 200 * y] == 0 and x - 1 + 200 * y not in explored:
                 frontier.add((x-1, y))
 
         depth += 1
@@ -126,8 +124,8 @@ def c_space_callback(c_space):
 
 def path_point_to_global_pose_stamped(robot_pos, pp0, pp1, header):
     # Local path
-    x = (pp0 - 100) * camera_horizontal_distance / 200
-    y = (100 - pp1) * camera_vertical_distance / 100
+    x = (100 - pp1) * camera_vertical_distance / 100
+    y = (100 - pp0) * camera_horizontal_distance / 200
 
     # Translate to global path
     dx = map_reference[0]
@@ -152,8 +150,8 @@ def path_point_to_local_pose_stamped(pp0, pp1, header):
     pose_stamped.pose = Pose()
 
     point = Point()
-    point.x = (pp0 - 100) * camera_horizontal_distance / 200
-    point.y = (100 - pp1) * camera_vertical_distance / 100
+    point.x = (100 - pp1) * camera_vertical_distance / 100
+    point.y = (100 - pp0) * camera_horizontal_distance / 200
     pose_stamped.pose.position = point
 
     return pose_stamped
@@ -275,7 +273,7 @@ def make_map(c_space):
         local_path.poses = [path_point_to_local_pose_stamped(path_point[0], path_point[1], header) for path_point in path]
         # local_path.poses.reverse() # reverse path becuz its backwards lol
 
-        # global_path_pub.publish(global_path)
+        global_path_pub.publish(global_path)
         local_path_pub.publish(local_path)
 
     else:

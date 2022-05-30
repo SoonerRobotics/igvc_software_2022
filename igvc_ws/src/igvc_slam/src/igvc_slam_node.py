@@ -5,6 +5,7 @@ import numpy as np
 import rospy
 import math
 import itertools
+import time
 
 from geometry_msgs.msg import Pose
 from nav_msgs.msg import OccupancyGrid, MapMetaData
@@ -12,6 +13,11 @@ from std_msgs.msg import Header
 
 # Configuration
 wait_for_vision = True
+
+# Camera Vertical vision (m)
+camera_vertical_distance = 2.75
+# Camera Horizontal vision (m)
+camera_horizontal_distance = 3
 
 # Publishers
 config_pub = rospy.Publisher("/igvc_slam/local_config_space", OccupancyGrid, queue_size=1)
@@ -25,16 +31,20 @@ metadata = MapMetaData(map_load_time = rospy.Time(), resolution=0.1,
 header = Header()
 header.frame_id = "map"
 
-max_range = 7
+max_range = 0.3 # meters
+no_go_range = 0.2 # meters
+
+max_range = int(max_range / (camera_horizontal_distance / 200))
+no_go_range = int(no_go_range / (camera_horizontal_distance / 200))
+
 xxxs = list(range(-max_range, max_range + 1))
 circle_around_indicies = []
 for x in xxxs:
     for y in xxxs:
-        if math.sqrt(x**2 + y**2) < max_range:
+        if max_range / 1.1 < math.sqrt(x**2 + y**2) < max_range:
             circle_around_indicies.append((x, y, math.sqrt(x**2 + y**2)))
         # if x == 0 or y == 0:
         #     circle_around_indicies.append((x, y, math.sqrt(x**2 + y**2)))
-no_go_range = 3
 
 # Initializiation
 last_lidar = None
@@ -56,6 +66,8 @@ def config_space_callback(event):
     if last_vision is None and last_lidar is None:
         return
 
+    # start = time.time()
+
     # Reset the hidden layer
     config_space = [0] * (200 * 100)
 
@@ -76,7 +88,7 @@ def config_space_callback(event):
 
                         if 0 <= (x + x_i) < 200 and 0 <= (y + y_i) < 100:
                             val_at_index = config_space[index]
-                            linear_t = max_range**2 - ((dist - no_go_range) / (max_range - no_go_range) * max_range**2)
+                            linear_t = 100 - ((dist - no_go_range) / (max_range - no_go_range) * 100)
 
                             if dist <= no_go_range:
                                 # obstacle expansion
@@ -89,6 +101,8 @@ def config_space_callback(event):
     header.stamp = rospy.Time.now()
     config_msg = OccupancyGrid(header=header, info=metadata, data=config_space)
     config_pub.publish(config_msg)
+
+    # rospy.loginfo(f"dilate time: {(time.time() - start)*1000:0.01f}ms")
 
 
 

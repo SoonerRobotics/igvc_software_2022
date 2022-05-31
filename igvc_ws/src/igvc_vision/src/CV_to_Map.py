@@ -110,7 +110,7 @@ def grass_filter(og_image):
     # create a lower bound for a pixel value
     lower = np.array([0, 0, 0])
     # create an upper bound for a pixel values
-    upper = np.array([255, 80, 230])
+    upper = np.array([255, 80, 240])
     # detects all white pixels wihin the range specified earlier
     mask = cv2.inRange(img, lower, upper)
     mask = 255 - mask

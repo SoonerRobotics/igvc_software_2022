@@ -22,7 +22,7 @@ system_state = SystemState.DISABLED
 sys.stdout.reconfigure(line_buffering=True)
 
 
-SHOW_PLOTS = True
+SHOW_PLOTS = False
 USE_SIM_TRUTH = False
 
 pos = None
@@ -116,7 +116,7 @@ def timer_callback(event):
         #     error = 0
 
         # Base forward velocity for both wheels
-        forward_speed = 0.20 * (1 - abs(error))**5
+        forward_speed = 0.50 * (1 - abs(error))**5
 
         # Define wheel linear velocities
         # Add proprtional error for turning.

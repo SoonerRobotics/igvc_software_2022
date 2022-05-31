@@ -273,7 +273,7 @@ def make_map(c_space):
         local_path.poses = [path_point_to_local_pose_stamped(path_point[0], path_point[1], header) for path_point in path]
         # local_path.poses.reverse() # reverse path becuz its backwards lol
 
-        global_path_pub.publish(global_path)
+        # global_path_pub.publish(global_path)
         local_path_pub.publish(local_path)
 
     else:

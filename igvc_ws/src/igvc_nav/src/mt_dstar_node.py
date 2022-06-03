@@ -2,7 +2,7 @@
 
 import rospy
 import math
-from std_msgs.msg import String, Header
+from std_msgs.msg import String, Header, Bool
 from geometry_msgs.msg import PoseStamped, Pose, Point, Quaternion, Transform, TransformStamped, Vector3
 from nav_msgs.msg import OccupancyGrid, Path, MapMetaData
 from igvc_msgs.msg import motors, EKFState
@@ -15,6 +15,7 @@ from path_planner.mt_dstar_lite import mt_dstar_lite
 from utilities.dstar_viewer import draw_dstar, setup_pyplot
 from heapq import heappush, heappop
 from matplotlib import pyplot as plt
+import sys
 
 
 SHOW_PLOTS = False
@@ -27,6 +28,7 @@ camera_horizontal_distance = 3
 
 global_path_pub = rospy.Publisher("/igvc/global_path", Path, queue_size=1)
 local_path_pub = rospy.Publisher("/igvc/local_path", Path, queue_size=1)
+mobi_start_publisher = rospy.Publisher("/igvc/mobstart", Bool, queue_size=1)
 
 # Moving Target D* Lite
 map_init = False
@@ -48,6 +50,7 @@ cost_map = None
 
 # Latest EKF update
 curEKF = EKFState()
+next_waypoint = (42.6683345, -83.2182354)
 
 # Best position to head to on the map (D* goal pos)
 best_pos = (0,0)
@@ -63,6 +66,12 @@ def true_pose_callback(data):
     curEKF.y = data.position.y
     (roll, pitch, yaw) = tf.transformations.euler_from_quaternion([data.orientation.x, data.orientation.y, data.orientation.z, data.orientation.w])
     curEKF.yaw = roll
+
+def get_angle_diff(to_angle, from_angle):
+    delta = to_angle - from_angle
+    delta = (delta + math.pi) % (2 * math.pi) - math.pi
+    
+    return delta
 
 def c_space_callback(c_space):
     global cost_map, map_reference, map_init, best_pos
@@ -86,6 +95,18 @@ def c_space_callback(c_space):
     frontier.add((50,99))
     explored = set()
 
+    north_to_gps = (next_waypoint[0] - curEKF.latitude) * 111086.2
+    west_to_gps = (curEKF.longitude - next_waypoint[1]) * 81978.2
+    heading_to_gps = math.atan2(west_to_gps,north_to_gps) % (2 * math.pi)
+
+    print(f"heading_to_gps: {heading_to_gps*180/math.pi:0.01f}")
+
+    if north_to_gps**2 + west_to_gps**2 <= 3:
+        mobi_start_publisher.publish(Bool(False))
+
+    sys.stdout.flush()
+    best_heading_err = 0
+
     depth = 0
     while depth < 50 and len(frontier) > 0:
         curfrontier = copy.copy(frontier)
@@ -95,29 +116,33 @@ def c_space_callback(c_space):
             # Cost at a point is sum of
             # - Negative X value (encourage forward)
             # - Positive Y value (discourage left/right)
-            # - Depth (number of breath-first search iterations)
-            # - Config space cost
-            cost = (100 - y) + depth * 4
+            # - Heading
+            heading_err_to_gps = abs(get_angle_diff(curEKF.yaw + math.atan2(50-x,100-y), heading_to_gps)) * 180 / math.pi
+            cost = (100 - y) + depth * 4 + (180 - heading_err_to_gps)
             if cost > best_pos_cost:
                 best_pos_cost = cost
                 temp_best_pos = pos
+                best_heading_err = heading_err_to_gps
 
             frontier.remove(pos)
             explored.add(x + 100 * y)
 
             # Look left/right for good points
-            if y > 0 and grid_data[x + 100 * (y-1)] == 0 and x + 100 * (y-1) not in explored:
+            if y > 1 and grid_data[x + 100 * (y-1)] < 50 and x + 100 * (y-1) not in explored:
                 frontier.add((x, y-1))
 
             # Look forward/back for good points
-            if x < 99 and grid_data[x + 1 + 100 * y] == 0 and x + 1 + 100 * y not in explored:
+            if x < 99 and grid_data[x + 1 + 100 * y] < 50 and x + 1 + 100 * y not in explored:
                 frontier.add((x+1, y))
-            if x > 0 and grid_data[x - 1 + 100 * y] == 0 and x - 1 + 100 * y not in explored:
+            if x > 0 and grid_data[x - 1 + 100 * y] < 50 and x - 1 + 100 * y not in explored:
                 frontier.add((x-1, y))
 
         depth += 1
 
-    map_reference = (curEKF.x, curEKF.y, curEKF.yaw)
+    print(f"best_heading_err: {best_heading_err:0.01f}")
+
+    # map_reference = (curEKF.x, curEKF.y, curEKF.yaw)
+    map_reference = (0,0,0)
     cost_map = grid_data
     best_pos = temp_best_pos
     map_init = False
@@ -174,14 +199,14 @@ def find_path_to_point(start, goal, map, width, height):
 
     path = {}
 
-    search_dirs = [(-1, 0), (1, 0), (0, 1), (0, -1)]
+    search_dirs = [(-1, 0), (-1, 1), (1, 1), (1, 0), (0, 1), (0, -1)]
 
     def h(point):
         return math.sqrt((goal[0] - point[0])**2 + (goal[1] - point[1])**2)
 
     # assumes adjacent pts
     def d(to_pt):
-        return 1 + map[to_pt[1] * width + to_pt[0]]
+        return 1 + map[to_pt[1] * width + to_pt[0]] / 10
 
     gScore = {}
     gScore[start] = 0

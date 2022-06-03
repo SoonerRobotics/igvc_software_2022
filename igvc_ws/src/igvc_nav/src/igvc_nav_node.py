@@ -48,7 +48,9 @@ def ekf_update(ekf_state):
     ekf = ekf_state
 
     pos = (ekf_state.x, ekf_state.y)
+    pos = (0,0)
     heading = ekf_state.yaw
+    heading = 0
 
 def true_pose_callback(data):
     global pos, heading

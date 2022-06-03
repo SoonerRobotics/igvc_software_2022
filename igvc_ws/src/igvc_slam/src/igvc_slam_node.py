@@ -32,16 +32,17 @@ header = Header()
 header.frame_id = "map"
 
 max_range = 0.4 # meters
-no_go_range = 0.2 # meters
+no_go_percent = 0.85
+no_go_range = max_range * no_go_percent # meters
 
 max_range = int(max_range / (camera_horizontal_distance / 100))
 no_go_range = int(no_go_range / (camera_horizontal_distance / 100))
 
 xxxs = list(range(-max_range, max_range + 1))
-circle_around_indicies = []
+circle_around_indicies = [(0,0,0)]
 for x in xxxs:
     for y in xxxs:
-        if max_range / 1.4 < math.sqrt(x**2 + y**2) < max_range:
+        if max_range * no_go_percent < math.sqrt(x**2 + y**2) < max_range:
             circle_around_indicies.append((x, y, math.sqrt(x**2 + y**2)))
         # if x == 0 or y == 0:
         #     circle_around_indicies.append((x, y, math.sqrt(x**2 + y**2)))

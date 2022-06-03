@@ -17,7 +17,7 @@ from matplotlib import pyplot as plt
 
 # Config
 
-ALWAYS_ZERO_HEADING = True
+ALWAYS_ZERO_HEADING = False
 
 class SystemState(Enum):
     DISABLED = 0

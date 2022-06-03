@@ -110,7 +110,7 @@ def grass_filter(og_image):
     # create a lower bound for a pixel value
     lower = np.array([0, 0, 0])
     # create an upper bound for a pixel values
-    upper = np.array([255, 80, 240])
+    upper = np.array([255, 80, 220])
     # detects all white pixels wihin the range specified earlier
     mask = cv2.inRange(img, lower, upper)
     mask = 255 - mask
@@ -230,7 +230,7 @@ if __name__ == '__main__':
     rospy.init_node('lane_finder', anonymous=True)
     # rospy.Subscriber("/cv_camera/image_raw/compressed", CompressedImage, camera_callback)
     
-    cam = cv2.VideoCapture(2, cv2.CAP_V4L2)
+    cam = cv2.VideoCapture(0, cv2.CAP_V4L2)
     cam.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
     cam.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
 

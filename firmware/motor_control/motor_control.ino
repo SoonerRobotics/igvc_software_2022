@@ -37,7 +37,7 @@ long counter = 0;
 void setup() {
   // put your setup code here, to run once:
   pinMode(ledPin, OUTPUT);
-  pinMode(estopPin, INPUT);
+  pinMode(estopPin, INPUT_PULLDOWN);
   pinMode(encoderLeftA, INPUT_PULLUP);
   pinMode(encoderLeftB, INPUT_PULLUP);
   pinMode(encoderRightA, INPUT_PULLUP);
@@ -168,6 +168,13 @@ void loop() {
       rightMotor.update();
       //Serial.printf("rightspeed %f ", leftMotor.getSpeedEstimate());
       //Serial.printf("targetspeed %f \n", targetRightSpeed);
+
+      
+      mainTasks.task_10ms = 0;
+    }
+    if(mainTasks.task_50ms)
+    {
+
       float left_distance = leftMotor.getDistance();
       float right_distance = rightMotor.getDistance();
 
@@ -175,15 +182,10 @@ void loop() {
       dyn = dyn + (left_distance + right_distance) / 2 * sin(don);
       don = don + (right_distance - left_distance) * 0.1016 / 0.4826;
 
-      motorDistances.xn = (short)(dxn * 10000);
-      motorDistances.yn = (short)(dyn * 10000);
-      motorDistances.on = (short)(don * 10000);
+      motorDistances.xn = (short)(dxn * 50000);
+      motorDistances.yn = (short)(dyn * 50000);
+      motorDistances.on = (short)(don * 50000);
       
-      
-      mainTasks.task_10ms = 0;
-    }
-    if(mainTasks.task_50ms)
-    {
 
 
       CAN_message_t outMsg;

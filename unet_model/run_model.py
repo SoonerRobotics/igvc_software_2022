@@ -16,12 +16,13 @@ ins = []
 count = 0
 while ret:
     ret, img = cam.read()
+    if not ret:
+        break
     cv2.imwrite(f"./example/video_in/f{count:04}.png", cv2.resize(img, (1024, 576)))
     img = readVideo(img, processing='in')
     
     ##cv2.imshow('before',img)
-    if not ret:
-            break
+
     #cv2.imshow('before', img)
     
 

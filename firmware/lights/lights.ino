@@ -19,6 +19,7 @@ FlexCAN_T4<CAN1, RX_SIZE_256, TX_SIZE_16> Can0;
 CAN_message_t lastMSG;
 
 long counter = 0;
+int lightsON = 1;
 
 void setup() {
   // put your setup code here, to run once:
@@ -27,7 +28,7 @@ void setup() {
   pinMode(light2, OUTPUT);
   pinMode(light3, OUTPUT);
   pinMode(light4, OUTPUT);
-  //pinMode(estop_sig, OUTPUT);
+  pinMode(estop_sig, INPUT);
 
   Serial.begin(9600);
   mainTaskTimer.begin(set_ms_flags, 1000); // calls this function every 1ms
@@ -61,33 +62,39 @@ void receiveMSG(const CAN_message_t &msg){
     digitalWrite(ledPin, tog);
     switch (msg.id){
       case 0:
-        robotStatus.eStop = 1;
-        robotStatus.mStop = 1;
-        robotStatus.mStart = 0;
+
+        lightsON = 1;
         break;
       case 1: 
-        robotStatus.mStop = 1;
-        robotStatus.mStart = 0;
-        robotStatus.eStop = 0;
+
+        lightsON = 1;
         break;
       case 9:
-        robotStatus.mStop = 0;
-        robotStatus.eStop = 0;
-        robotStatus.mStart = 1;
-       
+
+        break;
+      case 13:
+        lightsON = msg.buf[0];
   }
 }
 
 bool tog_audio = false;
 void loop() {
   // put your main code here, to run repeatedly:
-  if(robotStatus.eStop || robotStatus.mStop){
+  if(lightsON == 1){
           digitalWrite(light1, LOW);
           digitalWrite(light2, LOW);
           digitalWrite(light3, LOW);
           digitalWrite(light4, LOW);
   }
-  if(robotStatus.mStart){
+    // put your main code here, to run repeatedly:
+  if(lightsON == 0){
+          digitalWrite(light1, HIGH);
+          digitalWrite(light2, HIGH);
+          digitalWrite(light3, HIGH);
+          digitalWrite(light4, HIGH);
+  }
+  
+  if(lightsON == 2){
       if(mainTasks.task_1ms)
       {
         tog_audio = !tog_audio;

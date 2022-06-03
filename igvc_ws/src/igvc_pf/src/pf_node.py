@@ -17,7 +17,7 @@ from matplotlib import pyplot as plt
 
 # Config
 
-ALWAYS_ZERO_HEADING = False
+ALWAYS_ZERO_HEADING = True
 
 class SystemState(Enum):
     DISABLED = 0
@@ -44,8 +44,8 @@ def gps_point_to_xy_point(lat, lon, base_lat, base_lon):
     pose_stamped.pose = Pose()
 
     point = Point()
-    point.x = (lat - base_lat) * 110984.8
-    point.y = (base_lon - lon) * 90994.1
+    point.x = (lat - base_lat) * 111086.2
+    point.y = (base_lon - lon) * 81978.2
     pose_stamped.pose.position = point
 
     return pose_stamped
@@ -101,8 +101,8 @@ class ParticleFilterNode:
         output_msg.yaw = avg_theta if not ALWAYS_ZERO_HEADING else 0.0
 
         if self.first_gps is not None:
-            output_msg.latitude = self.first_gps[0] + avg_x / 110984.8
-            output_msg.longitude = self.first_gps[1] - avg_y / 90994.1
+            output_msg.latitude = self.first_gps[0] + avg_x / 111086.2
+            output_msg.longitude = self.first_gps[1] - avg_y / 81978.2
 
         self.state_pub.publish(output_msg)
 
@@ -119,17 +119,17 @@ class ParticleFilterNode:
                                     0.8 * self.first_gps[1] + 0.2 * data.longitude)
             self.PF.set_first_gps(self.first_gps)
             return
-        else:
-            # Publish some GPS coords as waypoints
-            local_path = Path()
-            path = [(35.210487, -97.441928), (35.210603, -97.442103), (35.210603, -97.442322), (35.210476, -97.442325), (35.210476, -97.442117)]
-            local_path.poses = [gps_point_to_xy_point(path_point[0], path_point[1], self.first_gps[0], self.first_gps[1]) for path_point in path]
+        # else:
+        #     # Publish some GPS coords as waypoints
+        #     local_path = Path()
+        #     path = [(35.210487, -97.441928), (35.210603, -97.442103), (35.210603, -97.442322), (35.210476, -97.442325), (35.210476, -97.442117)]
+        #     local_path.poses = [gps_point_to_xy_point(path_point[0], path_point[1], self.first_gps[0], self.first_gps[1]) for path_point in path]
 
-            self.global_path_pub.publish(local_path)
+        #     self.global_path_pub.publish(local_path)
 
         # HACKIEST HACK OF ALL TIME
         # TODO: REMOVE REMOVE REMOVE
-        self.PF.set_first_gps((35.210487, -97.441928))
+        # self.PF.set_first_gps((35.210487, -97.441928))
 
         self.PF.update_gps(data)      
 

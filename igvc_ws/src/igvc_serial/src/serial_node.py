@@ -8,8 +8,9 @@ import can
 import struct
 import datetime
 import sys
+from enum import Enum
 
-from std_msgs.msg import String, Bool
+from std_msgs.msg import String, Bool, Int16
 from igvc_msgs.msg import motors, velocity, gps, deltaodom
 
 # ROS node that facilitates all serial communications within the robot
@@ -29,7 +30,15 @@ CAN_ID_MOBSTOP = 1
 CAN_ID_MOBSTART = 9
 CAN_ID_SEND_VELOCITY = 10
 CAN_ID_RECV_VELOCITY = 11
+CAN_ID_SAFETY_LIGHTS_COMMAND = 13
 CAN_ID_ODOM_FEEDBACK = 14
+
+class SystemState(Enum):
+    DISABLED = 0
+    MANUAL = 1
+    AUTONOMOUS = 2
+
+system_state = SystemState.DISABLED
 
 class VelocityCANReadThread(threading.Thread):
     def __init__(self, can_obj):
@@ -178,6 +187,7 @@ def mobstart_callback(data: Bool):
 
     print(f"Sending mobstart with value {data.data}")
 
+    # Mobility start/stop
     if data.data == True:
         can_msg = can.Message(arbitration_id=CAN_ID_MOBSTART)
 
@@ -186,6 +196,22 @@ def mobstart_callback(data: Bool):
     except:
         print("Could not send CAN message")
 
+    # Safety Lights
+
+    packed_data = struct.pack('bb', 2 if (data.data and system_state == SystemState.AUTONOMOUS) else 1, 0)
+    
+    # print(f"sending {left_speed}, {right_speed}, {int(MAX_SPEED * 10)}")
+
+    can_msg = can.Message(arbitration_id=CAN_ID_SAFETY_LIGHTS_COMMAND, data=packed_data)
+
+    try:
+        cans["motor"].send(can_msg)
+    except:
+        print("Could not send CAN message")
+
+def system_state_callback(data):
+    global system_state
+    system_state = SystemState(data.data)
 
 # Initialize the serial node
 # Node handles all serial communication within the robot (motor, GPS)
@@ -205,6 +231,7 @@ def init_serial_node():
     motor_response_thread.start()
 
     rospy.Subscriber("/igvc/mobstart", Bool, mobstart_callback)
+    rospy.Subscriber("/igvc/system_state", Int16, system_state_callback)
 
     # Setup GPS serial and publisher
     # gps_serial = serials["gps"] = serial.Serial(port = '/dev/igvc-nucleo-722', baudrate = 9600)

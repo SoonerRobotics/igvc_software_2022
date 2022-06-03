@@ -52,7 +52,7 @@ class PerspectiveTransform:
         self.camera_angle = camera_angle
 
         # Ratio of number of pixels between top points of the trapezoid and their nearest vertical border
-        self.horizontal_corner_cut_ratio = 0.25
+        self.horizontal_corner_cut_ratio = 0.26
 
         # Output image dimensions
         self.output_img_shape_x = 640
@@ -203,7 +203,7 @@ def numpy_to_occupancyGrid(data_map):
     # dsize is (width, height) and copyMakeBorder is (tp, bottom, left, right)
     # data_map = cv2.dilate(data_map, (5, 5), iterations=1)
     # data_map = data_map[vertical_offset:,:]
-    data_map = cv2.resize(data_map, dsize=(200, 100), interpolation=cv2.INTER_LINEAR) / 2
+    data_map = cv2.resize(data_map, dsize=(100, 100), interpolation=cv2.INTER_LINEAR) / 2
     # data_map = cv2.flip(data_map, 0)
     # data_map = cv2.rotate(data_map, cv2.ROTATE_90_COUNTERCLOCKWISE)
     flattened = list(data_map.flatten().astype(int))
@@ -230,7 +230,7 @@ if __name__ == '__main__':
     rospy.init_node('lane_finder', anonymous=True)
     # rospy.Subscriber("/cv_camera/image_raw/compressed", CompressedImage, camera_callback)
     
-    cam = cv2.VideoCapture(0, cv2.CAP_V4L2)
+    cam = cv2.VideoCapture(2, cv2.CAP_V4L2)
     cam.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
     cam.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
 

@@ -73,17 +73,17 @@ def c_space_callback(c_space):
     grid_data = c_space.data
 
     # Make a costmap
-    temp_cost_map = [0] * 200 * 100
+    temp_cost_map = [0] * 100 * 100
 
     # Find the best position
-    temp_best_pos = (100, 99)
+    temp_best_pos = (50, 99)
     best_pos_cost = -1000
 
     # Breath-first look for good points
     # This allows us to find a point within the range of obstacles by not
     # exploring over obstacles.
     frontier = set()
-    frontier.add((100,99))
+    frontier.add((50,99))
     explored = set()
 
     depth = 0
@@ -103,16 +103,16 @@ def c_space_callback(c_space):
                 temp_best_pos = pos
 
             frontier.remove(pos)
-            explored.add(pos[1] * 100 + pos[0])
+            explored.add(x + 100 * y)
 
             # Look left/right for good points
-            if y > 0 and grid_data[x + 200 * (y-1)] == 0 and x + 200 * (y-1) not in explored:
+            if y > 0 and grid_data[x + 100 * (y-1)] == 0 and x + 100 * (y-1) not in explored:
                 frontier.add((x, y-1))
 
             # Look forward/back for good points
-            if x < 199 and grid_data[x + 1 + 200 * y] == 0 and x + 1 + 200 * y not in explored:
+            if x < 99 and grid_data[x + 1 + 100 * y] == 0 and x + 1 + 100 * y not in explored:
                 frontier.add((x+1, y))
-            if x > 0 and grid_data[x - 1 + 200 * y] == 0 and x - 1 + 200 * y not in explored:
+            if x > 0 and grid_data[x - 1 + 100 * y] == 0 and x - 1 + 100 * y not in explored:
                 frontier.add((x-1, y))
 
         depth += 1
@@ -125,7 +125,7 @@ def c_space_callback(c_space):
 def path_point_to_global_pose_stamped(robot_pos, pp0, pp1, header):
     # Local path
     x = (100 - pp1) * camera_vertical_distance / 100
-    y = (100 - pp0) * camera_horizontal_distance / 200
+    y = (50 - pp0) * camera_horizontal_distance / 100
 
     # Translate to global path
     dx = map_reference[0]
@@ -151,7 +151,7 @@ def path_point_to_local_pose_stamped(pp0, pp1, header):
 
     point = Point()
     point.x = (100 - pp1) * camera_vertical_distance / 100
-    point.y = (100 - pp0) * camera_horizontal_distance / 200
+    point.y = (50 - pp0) * camera_horizontal_distance / 100
     pose_stamped.pose.position = point
 
     return pose_stamped
@@ -167,7 +167,7 @@ def reconstruct_path(path, current):
 
 def find_path_to_point(start, goal, map, width, height):
 
-    looked_at = np.zeros((200, 100))
+    looked_at = np.zeros((100, 100))
     
 
     open_set = [start]
@@ -244,7 +244,7 @@ def make_map(c_space):
     # Reset the path
     path = None
 
-    robot_pos = (100, 99)
+    robot_pos = (50, 99)
 
     # MOVING TARGET D*LITE
     # If this is the first time receiving a map, or if the path failed to be made last time (for robustness),
@@ -253,7 +253,7 @@ def make_map(c_space):
     # TODO: Make this not True again lol
     if True:
         # start_time = time.time()
-        path = find_path_to_point(robot_pos, best_pos, cost_map, 200, 100)
+        path = find_path_to_point(robot_pos, best_pos, cost_map, 100, 100)
         # print(f"plan time: {(time.time() - start_time) * 1000:02.02f}ms")
         map_init = True
 
@@ -273,7 +273,7 @@ def make_map(c_space):
         local_path.poses = [path_point_to_local_pose_stamped(path_point[0], path_point[1], header) for path_point in path]
         # local_path.poses.reverse() # reverse path becuz its backwards lol
 
-        # global_path_pub.publish(global_path)
+        global_path_pub.publish(global_path)
         local_path_pub.publish(local_path)
 
     else:

@@ -107,21 +107,21 @@ def timer_callback(event):
         # Get heading to to lookahead from current position
         heading_to_lookahead = math.atan2(lookahead[1] - cur_pos[1], lookahead[0] - cur_pos[0])
 
-        print(f"h_2_l: {heading_to_lookahead * 180 / (math.pi)}")
+        # print(f"h_2_l: {heading_to_lookahead * 180 / (math.pi)}")
 
         # Get difference in our heading vs heading to lookahead
         # Normalize error to -1 to 1 scale
         error = get_angle_diff(heading_to_lookahead, heading) / math.pi
 
         # print(f"am at {cur_pos[0]:0.02f},{cur_pos[1]:0.02f}, want to go to {lookahead[0]:0.02f},{lookahead[1]:0.02f}")
-        print(f"angle delta: {error * 180:0.01f}")
+        # print(f"angle delta: {error * 180:0.01f}")
 
         # print(f"error is {error}")
         # if abs(error) < 2.0:
         #     error = 0
 
         # Base forward velocity for both wheels
-        forward_speed = 0.50 * (1 - abs(error))**5
+        forward_speed = 0.6 * (1 - abs(error))**5
 
         # Define wheel linear velocities
         # Add proprtional error for turning.

@@ -98,7 +98,7 @@ class IGVCWindow(QMainWindow):
 
         self.vlayout.addWidget(self.system_state_label)
         self.vlayout.addWidget(self.speed_label)
-        self.vlayout.addWidget(self.dead_rekt_label)
+        # self.vlayout.addWidget(self.dead_rekt_label)
         self.vlayout.addWidget(self.wheels_label)
         self.vlayout.addWidget(self.pose_label)
         self.vlayout.addWidget(self.gps_label)
@@ -131,7 +131,7 @@ class IGVCWindow(QMainWindow):
         # Subscribe to necessary topics
         rospy.Subscriber("/igvc_slam/local_config_space", OccupancyGrid, self.c_space_callback, queue_size=1)
         rospy.Subscriber("/igvc/state", EKFState, self.ekf_callback)
-        rospy.Subscriber("/igvc/global_path", Path, self.path_callback)
+        rospy.Subscriber("/igvc/local_path", Path, self.path_callback)
         rospy.Subscriber("/igvc/velocity", velocity, self.velocity_callback)
         rospy.Subscriber("/igvc/deltaodom", deltaodom, self.deltaodom_callback)
         rospy.Subscriber("/igvc/gps", gps, self.gps_callback)
@@ -142,6 +142,48 @@ class IGVCWindow(QMainWindow):
         self.first_gps = None
 
     def draw_vision(self):
+        if self.curMap is not None and self.lastEKF is not None:
+            self.path_canvas.axes.cla()
+
+            self.path_canvas.axes.imshow(self.last_image, interpolation = 'none', extent=[-camera_horizontal_distance/2, camera_horizontal_distance/2, 0, camera_vertical_distance])
+            map_mat = np.reshape(self.curMap, (100, 100))
+
+            # if self.first_draw:
+            self.path_canvas.axes.set_ylabel('x (m)')
+            self.path_canvas.axes.set_xlabel('y (m)')
+
+            self.path_canvas.axes.set_xlim(-camera_horizontal_distance/2, camera_horizontal_distance/2)
+            self.path_canvas.axes.set_ylim(0, camera_vertical_distance)
+
+            self.norm = plt.colors.Normalize()
+
+            # self.first_draw = False
+
+            self.colors = plt.cm.jet(self.norm(map_mat))
+            self.colors[:,:,3] = 0.5
+            self.colors[map_mat == 0,3] = 0
+
+            self.path_canvas.axes.imshow(self.colors, interpolation = 'none', extent=[-camera_horizontal_distance/2, camera_horizontal_distance/2, 0, camera_vertical_distance])
+
+            # # Zoom into -5m to 5m
+            
+            if self.path:
+                for pose in self.path.poses:
+                    point = (pose.pose.position.x, pose.pose.position.y)
+                    self.path_canvas.axes.plot(-point[1], point[0], '.', markersize=8, color="red")
+
+            # robot_pos = (self.lastEKF.x, self.lastEKF.y)
+            # self.path_canvas.axes.plot(-robot_pos[1], robot_pos[0], '.', markersize=16, color="black")
+
+            # yes, pic = self.cam.read()
+
+            # if yes:
+            #     self.path_canvas.axes2.imshow(pic)
+
+            self.path_canvas.draw_idle()
+        # pass
+
+    def draw_path(self):
         if self.curMap is not None and self.lastEKF is not None:
             self.path_canvas.axes.cla()
 
@@ -190,6 +232,7 @@ class IGVCWindow(QMainWindow):
             self.csvfile.close()
 
         self.draw_vision()
+        # self.draw_path()
 
     def mobi_start_callback(self, data):
         self.mobi_start = data.data

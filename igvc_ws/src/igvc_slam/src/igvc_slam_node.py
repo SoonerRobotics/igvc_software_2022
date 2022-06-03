@@ -27,15 +27,15 @@ origin = Pose()
 origin.position.x = -10
 origin.position.y = -10
 metadata = MapMetaData(map_load_time = rospy.Time(), resolution=0.1,
-                            width = 200, height = 100, origin = origin)
+                            width = 100, height = 100, origin = origin)
 header = Header()
 header.frame_id = "map"
 
-max_range = 0.3 # meters
+max_range = 0.35 # meters
 no_go_range = 0.1 # meters
 
-max_range = int(max_range / (camera_horizontal_distance / 200))
-no_go_range = int(no_go_range / (camera_horizontal_distance / 200))
+max_range = int(max_range / (camera_horizontal_distance / 100))
+no_go_range = int(no_go_range / (camera_horizontal_distance / 100))
 
 xxxs = list(range(-max_range, max_range + 1))
 circle_around_indicies = []
@@ -69,7 +69,7 @@ def config_space_callback(event):
     # start = time.time()
 
     # Reset the hidden layer
-    config_space = [0] * (200 * 100)
+    config_space = [0] * (100 * 100)
 
     combined_maps = None
     if last_vision is not None and last_lidar is not None:
@@ -80,13 +80,13 @@ def config_space_callback(event):
         combined_maps = last_lidar.data
 
     # Update the hidden layer before applying the new map to the current configuration space
-    for x in range(200):
+    for x in range(100):
         for y in range(100):
-            if combined_maps[x + y * 200] > 0:
+            if combined_maps[x + y * 100] > 0:
                 for x_i, y_i, dist in circle_around_indicies:
-                        index = (x + x_i) + 200 * (y + y_i)
+                        index = (x + x_i) + 100 * (y + y_i)
 
-                        if 0 <= (x + x_i) < 200 and 0 <= (y + y_i) < 100:
+                        if 0 <= (x + x_i) < 100 and 0 <= (y + y_i) < 100:
                             val_at_index = config_space[index]
                             linear_t = 100 - ((dist - no_go_range) / (max_range - no_go_range) * 100)
 

@@ -31,8 +31,8 @@ metadata = MapMetaData(map_load_time = rospy.Time(), resolution=0.1,
 header = Header()
 header.frame_id = "map"
 
-max_range = 0.35 # meters
-no_go_range = 0.1 # meters
+max_range = 0.4 # meters
+no_go_range = 0.2 # meters
 
 max_range = int(max_range / (camera_horizontal_distance / 100))
 no_go_range = int(no_go_range / (camera_horizontal_distance / 100))
@@ -41,7 +41,7 @@ xxxs = list(range(-max_range, max_range + 1))
 circle_around_indicies = []
 for x in xxxs:
     for y in xxxs:
-        if max_range / 1.3 < math.sqrt(x**2 + y**2) < max_range:
+        if max_range / 1.4 < math.sqrt(x**2 + y**2) < max_range:
             circle_around_indicies.append((x, y, math.sqrt(x**2 + y**2)))
         # if x == 0 or y == 0:
         #     circle_around_indicies.append((x, y, math.sqrt(x**2 + y**2)))

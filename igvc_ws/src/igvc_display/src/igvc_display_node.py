@@ -231,8 +231,8 @@ class IGVCWindow(QMainWindow):
             app.quit()
             self.csvfile.close()
 
-        self.draw_vision()
-        # self.draw_path()
+        # self.draw_vision()
+        self.draw_path()
 
     def mobi_start_callback(self, data):
         self.mobi_start = data.data

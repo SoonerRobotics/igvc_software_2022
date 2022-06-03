@@ -101,7 +101,7 @@ class PerspectiveTransform:
 
         return output
 
-transform = PerspectiveTransform(5)
+transform = PerspectiveTransform(0)
 
 # returns a filtered image and unfiltered image. This is needed for white lines on green grass
 # output are two images, First output is the filtered image, Second output is the original pre-filtered image

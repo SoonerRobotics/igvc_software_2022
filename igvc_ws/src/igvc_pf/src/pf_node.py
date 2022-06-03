@@ -96,8 +96,8 @@ class ParticleFilterNode:
         avg_x, avg_y, avg_theta = self.PF.update_odom(data)
 
         output_msg = EKFState()
-        output_msg.x = avg_x
-        output_msg.y = avg_y
+        output_msg.x = avg_x if not ALWAYS_ZERO_HEADING else 0.0
+        output_msg.y = avg_y if not ALWAYS_ZERO_HEADING else 0.0
         output_msg.yaw = avg_theta if not ALWAYS_ZERO_HEADING else 0.0
 
         if self.first_gps is not None:

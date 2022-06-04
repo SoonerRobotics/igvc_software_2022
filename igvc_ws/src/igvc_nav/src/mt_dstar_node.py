@@ -50,7 +50,8 @@ cost_map = None
 
 # Latest EKF update
 curEKF = EKFState()
-waypoints = []
+waypoints=[]
+#waypoints = [(42.6681017,-83.2184545)]
 #waypoints = [(42.6683345, -83.2182354)]
 
 # Best position to head to on the map (D* goal pos)
@@ -83,17 +84,17 @@ def c_space_callback(c_space):
     grid_data = c_space.data
 
     # Make a costmap
-    temp_cost_map = [0] * 100 * 100
+    temp_cost_map = [0] * 80 * 80
 
     # Find the best position
-    temp_best_pos = (50, 99)
+    temp_best_pos = (40, 78)
     best_pos_cost = -1000
 
     # Breath-first look for good points
     # This allows us to find a point within the range of obstacles by not
     # exploring over obstacles.
     frontier = set()
-    frontier.add((50,99))
+    frontier.add((40,78))
     explored = set()
 
     if len(waypoints) > 0:
@@ -111,7 +112,7 @@ def c_space_callback(c_space):
     # best_heading_err = 0
 
     depth = 0
-    while depth < 50 and len(frontier) > 0:
+    while depth < 40 and len(frontier) > 0:
         curfrontier = copy.copy(frontier)
         for pos in curfrontier:
             x = pos[0] # left to right
@@ -120,10 +121,10 @@ def c_space_callback(c_space):
             # - Negative X value (encourage forward)
             # - Positive Y value (discourage left/right)
             # - Heading
-            cost = (100 - y) + depth * 4
+            cost = (80 - y) + depth * 4
 
             if len(waypoints) > 0:
-                heading_err_to_gps = abs(get_angle_diff(curEKF.yaw + math.atan2(50-x,100-y), heading_to_gps)) * 180 / math.pi
+                heading_err_to_gps = abs(get_angle_diff(curEKF.yaw + math.atan2(40-x,80-y), heading_to_gps)) * 180 / math.pi
                 cost += (180 - heading_err_to_gps)
 
             if cost > best_pos_cost:
@@ -132,16 +133,16 @@ def c_space_callback(c_space):
                 # best_heading_err = heading_err_to_gps
 
             frontier.remove(pos)
-            explored.add(x + 100 * y)
+            explored.add(x + 80 * y)
 
             # Look left/right for good points
-            if y > 1 and grid_data[x + 100 * (y-1)] < 50 and x + 100 * (y-1) not in explored:
+            if y > 1 and grid_data[x + 80 * (y-1)] < 50 and x + 80 * (y-1) not in explored:
                 frontier.add((x, y-1))
 
             # Look forward/back for good points
-            if x < 99 and grid_data[x + 1 + 100 * y] < 50 and x + 1 + 100 * y not in explored:
+            if x < 79 and grid_data[x + 1 + 80 * y] < 50 and x + 1 + 80 * y not in explored:
                 frontier.add((x+1, y))
-            if x > 0 and grid_data[x - 1 + 100 * y] < 50 and x - 1 + 100 * y not in explored:
+            if x > 0 and grid_data[x - 1 + 80 * y] < 50 and x - 1 + 80 * y not in explored:
                 frontier.add((x-1, y))
 
         depth += 1
@@ -156,8 +157,8 @@ def c_space_callback(c_space):
 
 def path_point_to_global_pose_stamped(robot_pos, pp0, pp1, header):
     # Local path
-    x = (100 - pp1) * camera_vertical_distance / 100
-    y = (50 - pp0) * camera_horizontal_distance / 100
+    x = (80 - pp1) * camera_vertical_distance / 80
+    y = (40 - pp0) * camera_horizontal_distance / 80
 
     # Translate to global path
     dx = map_reference[0]
@@ -182,8 +183,8 @@ def path_point_to_local_pose_stamped(pp0, pp1, header):
     pose_stamped.pose = Pose()
 
     point = Point()
-    point.x = (100 - pp1) * camera_vertical_distance / 100
-    point.y = (50 - pp0) * camera_horizontal_distance / 100
+    point.x = (80 - pp1) * camera_vertical_distance / 80
+    point.y = (40 - pp0) * camera_horizontal_distance / 80
     pose_stamped.pose.position = point
 
     return pose_stamped
@@ -199,14 +200,22 @@ def reconstruct_path(path, current):
 
 def find_path_to_point(start, goal, map, width, height):
 
-    looked_at = np.zeros((100, 100))
+    looked_at = np.zeros((80, 80))
     
 
     open_set = [start]
 
     path = {}
 
-    search_dirs = [(-1, 0,1), (-1, 1,1.41), (1, 1,1.41), (1, 0,1), (0, 1,1), (0, -1,1)]
+    search_dirs = []
+
+    for x in range(-1, 2):
+        for y in range(-1, 2):
+            if x == 0 and y == 0:
+                continue
+            search_dirs.append((x,y,math.sqrt(x**2+y**2)))
+
+    # print(search_dirs)
 
     def h(point):
         return math.sqrt((goal[0] - point[0])**2 + (goal[1] - point[1])**2)
@@ -276,7 +285,7 @@ def make_map(c_space):
     # Reset the path
     path = None
 
-    robot_pos = (50, 99)
+    robot_pos = (40, 78)
 
     # MOVING TARGET D*LITE
     # If this is the first time receiving a map, or if the path failed to be made last time (for robustness),
@@ -285,7 +294,9 @@ def make_map(c_space):
     # TODO: Make this not True again lol
     if True:
         # start_time = time.time()
-        path = find_path_to_point(robot_pos, best_pos, cost_map, 100, 100)
+        path = find_path_to_point(robot_pos, best_pos, cost_map, 80, 80)
+        # print(path)
+        # sys.stdout.flush()
         # print(f"plan time: {(time.time() - start_time) * 1000:02.02f}ms")
         map_init = True
 
@@ -335,7 +346,7 @@ def mt_dstar_node():
         rospy.Subscriber("/igvc/state", EKFState, ekf_callback)
 
     # Make a timer to publish new paths
-    timer = rospy.Timer(rospy.Duration(secs=0.15), make_map, oneshot=False)
+    timer = rospy.Timer(rospy.Duration(secs=0.1), make_map, oneshot=False)
 
     # if SHOW_PLOTS:
     setup_pyplot()

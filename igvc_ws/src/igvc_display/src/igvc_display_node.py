@@ -146,7 +146,7 @@ class IGVCWindow(QMainWindow):
             self.path_canvas.axes.cla()
 
             self.path_canvas.axes.imshow(self.last_image, interpolation = 'none', extent=[-camera_horizontal_distance/2, camera_horizontal_distance/2, 0, camera_vertical_distance])
-            map_mat = np.reshape(self.curMap, (100, 100))
+            map_mat = np.reshape(self.curMap, (80, 80))
 
             # if self.first_draw:
             self.path_canvas.axes.set_ylabel('x (m)')

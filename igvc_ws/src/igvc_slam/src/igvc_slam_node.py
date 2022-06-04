@@ -31,12 +31,12 @@ metadata = MapMetaData(map_load_time = rospy.Time(), resolution=0.1,
 header = Header()
 header.frame_id = "map"
 
-max_range = 0.35 # meters
-no_go_percent = 0.95
+max_range = 0.4 # meters
+no_go_percent = 0.75
 no_go_range = max_range * no_go_percent # meters
 
-max_range = int(max_range / (camera_horizontal_distance / 100))
-no_go_range = int(no_go_range / (camera_horizontal_distance / 100))
+max_range = int(max_range / (camera_horizontal_distance / 80))
+no_go_range = int(no_go_range / (camera_horizontal_distance / 80))
 
 xxxs = list(range(-max_range, max_range + 1))
 circle_around_indicies = [(0,0,0)]
@@ -70,7 +70,7 @@ def config_space_callback(event):
     # start = time.time()
 
     # Reset the hidden layer
-    config_space = [0] * (100 * 100)
+    config_space = [0] * (80 * 80)
 
     combined_maps = None
     if last_vision is not None and last_lidar is not None:
@@ -81,13 +81,13 @@ def config_space_callback(event):
         combined_maps = last_lidar.data
 
     # Update the hidden layer before applying the new map to the current configuration space
-    for x in range(100):
-        for y in range(100):
-            if combined_maps[x + y * 100] > 0:
+    for x in range(80):
+        for y in range(1,80):
+            if combined_maps[x + y * 80] > 0:
                 for x_i, y_i, dist in circle_around_indicies:
-                        index = (x + x_i) + 100 * (y + y_i)
+                        index = (x + x_i) + 80 * (y + y_i)
 
-                        if 0 <= (x + x_i) < 100 and 0 <= (y + y_i) < 100:
+                        if 0 <= (x + x_i) < 80 and 0 <= (y + y_i) < 80:
                             val_at_index = config_space[index]
                             linear_t = 100 - ((dist - no_go_range) / (max_range - no_go_range) * 100)
 
@@ -116,7 +116,7 @@ def igvc_slam_node():
     vision_sub = rospy.Subscriber("/igvc/lane_map", OccupancyGrid, lanes_camera_callback, queue_size=10)
 
     # Make a timer to publish configuration spaces periodically
-    timer = rospy.Timer(rospy.Duration(secs=0.15), config_space_callback, oneshot=False)
+    timer = rospy.Timer(rospy.Duration(secs=0.1), config_space_callback, oneshot=False)
 
     # Wait for topic updates
     rospy.spin()

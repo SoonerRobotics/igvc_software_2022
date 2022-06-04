@@ -86,13 +86,15 @@ def clamp(val, min, max):
     return val
 
 def timer_callback(event):
+    global back_count
+
     if pos is None or heading is None:
         return
 
     cur_pos = (pos[0], pos[1])
 
     lookahead = None
-    radius = 0.5 # Starting radius
+    radius = 0.8 # Starting radius
 
     while lookahead is None and radius <= 4: # Look until we hit 3 meters max
         lookahead = pp.get_lookahead_point(cur_pos[0], cur_pos[1], radius)
@@ -105,7 +107,7 @@ def timer_callback(event):
     motor_pkt.left = 0
     motor_pkt.right = 0
 
-    if back_count >= 0 or (lookahead is not None and ((lookahead[1] - cur_pos[1]) ** 2 + (lookahead[0] - cur_pos[0]) ** 2) > 0.001):
+    if back_count == -1 and (lookahead is not None and ((lookahead[1] - cur_pos[1]) ** 2 + (lookahead[0] - cur_pos[0]) ** 2) > 0.001):
         # Get heading to to lookahead from current position
         heading_to_lookahead = math.atan2(lookahead[1] - cur_pos[1], lookahead[0] - cur_pos[0])
 
@@ -123,7 +125,7 @@ def timer_callback(event):
         #     error = 0
 
         # Base forward velocity for both wheels
-        forward_speed = 0.6 * (1 - abs(error))**5
+        forward_speed = 0.55 * (1 - abs(error))**5
 
         # Define wheel linear velocities
         # Add proprtional error for turning.

@@ -24,7 +24,7 @@ height_offset = 58
 captured_width = 70
 captured_height = 50
 
-frame_rate = 8.0 # Hz
+frame_rate = 5.0 # Hz
 
 preview_pub = rospy.Publisher("/igvc/preview", Image, queue_size=1)
 image_pub = rospy.Publisher("/igvc/lane_map", OccupancyGrid, queue_size=1)
@@ -203,7 +203,7 @@ def numpy_to_occupancyGrid(data_map):
     # dsize is (width, height) and copyMakeBorder is (tp, bottom, left, right)
     # data_map = cv2.dilate(data_map, (5, 5), iterations=1)
     # data_map = data_map[vertical_offset:,:]
-    data_map = cv2.resize(data_map, dsize=(100, 100), interpolation=cv2.INTER_LINEAR) / 2
+    data_map = cv2.resize(data_map, dsize=(80, 80), interpolation=cv2.INTER_LINEAR) / 2
     # data_map = cv2.flip(data_map, 0)
     # data_map = cv2.rotate(data_map, cv2.ROTATE_90_COUNTERCLOCKWISE)
     flattened = list(data_map.flatten().astype(int))

@@ -2,7 +2,8 @@
 
 import rospy
 import math
-from std_msgs.msg import String, Header, Bool
+from enum import Enum
+from std_msgs.msg import String, Header, Bool, Int16
 from geometry_msgs.msg import PoseStamped, Pose, Point, Quaternion, Transform, TransformStamped, Vector3
 from nav_msgs.msg import OccupancyGrid, Path, MapMetaData
 from igvc_msgs.msg import motors, EKFState
@@ -16,6 +17,13 @@ from utilities.dstar_viewer import draw_dstar, setup_pyplot
 from heapq import heappush, heappop
 from matplotlib import pyplot as plt
 import sys
+
+class SystemState(Enum):
+    DISABLED = 0
+    MANUAL = 1
+    AUTONOMOUS = 2
+
+system_state = SystemState.DISABLED
 
 
 SHOW_PLOTS = False
@@ -50,12 +58,30 @@ cost_map = None
 
 # Latest EKF update
 curEKF = EKFState()
-waypoints=[]
+
+# Practice Waypoints (North-bound)
+orig_waypoints = [(42.66796006,-83.21843266),(42.66808596,-83.21844564),(42.66821182,-83.21845873)]
+
+# Real Waypoints (North-bound)
+# orig_waypoints = [(42.66792771,-83.21932764),(42.66807663,-83.21935916),(42.66812064,-83.21936061),(42.66826972,-83.21934030)]
+
 #waypoints = [(42.6681017,-83.2184545)]
 #waypoints = [(42.6683345, -83.2182354)]
 
+waypoints = [pt for pt in orig_waypoints]
+
 # Best position to head to on the map (D* goal pos)
 best_pos = (0,0)
+
+def system_state_callback(data):
+    global system_state
+    system_state = SystemState(data.data)
+
+    if system_state == SystemState.AUTONOMOUS:
+        waypoints = [pt for pt in orig_waypoints]
+        if math.pi < curEKF.yaw < 3 * math.pi / 2:
+            # Facing south, reverse waypoints
+            waypoints = waypoints[::-1]
 
 def ekf_callback(data):
     global curEKF
@@ -105,8 +131,9 @@ def c_space_callback(c_space):
 
         # print(f"heading_to_gps: {heading_to_gps*180/math.pi:0.01f}")
 
-        if north_to_gps**2 + west_to_gps**2 <= 3:
-            mobi_start_publisher.publish(Bool(False))
+        if north_to_gps**2 + west_to_gps**2 <= 2:
+            # mobi_start_publisher.publish(Bool(False))
+            waypoints.pop(0)
 
     # sys.stdout.flush()
     # best_heading_err = 0
@@ -344,6 +371,8 @@ def mt_dstar_node():
         rospy.Subscriber("/sim/true_pose", Pose, true_pose_callback)
     else:
         rospy.Subscriber("/igvc/state", EKFState, ekf_callback)
+
+    rospy.Subscriber("/igvc/system_state", Int16, system_state_callback)
 
     # Make a timer to publish new paths
     timer = rospy.Timer(rospy.Duration(secs=0.1), make_map, oneshot=False)

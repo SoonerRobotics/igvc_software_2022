@@ -107,7 +107,7 @@ def timer_callback(event):
     motor_pkt.left = 0
     motor_pkt.right = 0
 
-    if back_count == -1 and (lookahead is not None and ((lookahead[1] - cur_pos[1]) ** 2 + (lookahead[0] - cur_pos[0]) ** 2) > 0.001):
+    if back_count == -1 and (lookahead is not None and ((lookahead[1] - cur_pos[1]) ** 2 + (lookahead[0] - cur_pos[0]) ** 2) > 0.1):
         # Get heading to to lookahead from current position
         heading_to_lookahead = math.atan2(lookahead[1] - cur_pos[1], lookahead[0] - cur_pos[0])
 

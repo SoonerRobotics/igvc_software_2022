@@ -94,7 +94,7 @@ def timer_callback(event):
     cur_pos = (pos[0], pos[1])
 
     lookahead = None
-    radius = 0.8 # Starting radius
+    radius = 0.7 # Starting radius
 
     while lookahead is None and radius <= 4: # Look until we hit 3 meters max
         lookahead = pp.get_lookahead_point(cur_pos[0], cur_pos[1], radius)
@@ -125,13 +125,13 @@ def timer_callback(event):
         #     error = 0
 
         # Base forward velocity for both wheels
-        forward_speed = 0.55 * (1 - abs(error))**5
+        forward_speed = 0.7 * (1 - abs(error))**5
 
         # Define wheel linear velocities
         # Add proprtional error for turning.
         # TODO: PID instead of just P
-        motor_pkt.left = (forward_speed - clamp(0.4 * error, -0.25, 0.25))
-        motor_pkt.right = (forward_speed + clamp(0.4 * error, -0.25, 0.25))
+        motor_pkt.left = (forward_speed - clamp(0.4 * error, -0.2, 0.2))
+        motor_pkt.right = (forward_speed + clamp(0.4 * error, -0.2, 0.2))
 
     else:
         # We couldn't find a suitable direction to head, stop the robot.

@@ -60,10 +60,14 @@ cost_map = None
 curEKF = EKFState()
 
 # Practice Waypoints (North-bound)
-orig_waypoints = [(42.66796006,-83.21843266),(42.66808596,-83.21844564),(42.66821182,-83.21845873)]
+#orig_waypoints = [(42.66821182,-83.21845873),(42.66808596,-83.21844564),(42.66796006,-83.21843266)]
 
 # Real Waypoints (North-bound)
-# orig_waypoints = [(42.66792771,-83.21932764),(42.66807663,-83.21935916),(42.66812064,-83.21936061),(42.66826972,-83.21934030)]
+# orig_waypoints = [(42.66826972,-83.21934030),(42.66812064,-83.21936061),(42.66807663,-83.21935916),(42.66792771,-83.21932764)]
+
+# Real Waypoints (South-bound)
+orig_waypoints = [(42.66792771,-83.21932764),(42.66807663,-83.21935916),(42.66812064,-83.21936061),(42.66826972,-83.21934030)]
+
 
 #waypoints = [(42.6681017,-83.2184545)]
 #waypoints = [(42.6683345, -83.2182354)]
@@ -79,9 +83,15 @@ def system_state_callback(data):
 
     if system_state == SystemState.AUTONOMOUS:
         waypoints = [pt for pt in orig_waypoints]
-        if math.pi < curEKF.yaw < 3 * math.pi / 2:
+        # print(f"Yaw is {curEKF.yaw/math.pi:0.1f}pi")
+        #if math.pi/2 < curEKF.yaw < 3 * math.pi / 2:
             # Facing south, reverse waypoints
-            waypoints = waypoints[::-1]
+            # print("Running South!!")
+            #waypoints = waypoints[::-1]
+        # else:
+            # print("Running North!!")
+        
+        # sys.stdout.flush()
 
 def ekf_callback(data):
     global curEKF
@@ -131,7 +141,7 @@ def c_space_callback(c_space):
 
         # print(f"heading_to_gps: {heading_to_gps*180/math.pi:0.01f}")
 
-        if north_to_gps**2 + west_to_gps**2 <= 2:
+        if north_to_gps**2 + west_to_gps**2 <= 1:
             # mobi_start_publisher.publish(Bool(False))
             waypoints.pop(0)
 
@@ -139,7 +149,7 @@ def c_space_callback(c_space):
     # best_heading_err = 0
 
     depth = 0
-    while depth < 40 and len(frontier) > 0:
+    while depth < 30 and len(frontier) > 0:
         curfrontier = copy.copy(frontier)
         for pos in curfrontier:
             x = pos[0] # left to right
@@ -148,11 +158,11 @@ def c_space_callback(c_space):
             # - Negative X value (encourage forward)
             # - Positive Y value (discourage left/right)
             # - Heading
-            cost = (80 - y) + depth * 4
+            cost = (80 - y) * 1.5 + depth * 1.5 - abs(50 - x)
 
             if len(waypoints) > 0:
                 heading_err_to_gps = abs(get_angle_diff(curEKF.yaw + math.atan2(40-x,80-y), heading_to_gps)) * 180 / math.pi
-                cost += (180 - heading_err_to_gps)
+                cost += (180 - heading_err_to_gps) * 0.9
 
             if cost > best_pos_cost:
                 best_pos_cost = cost
@@ -309,6 +319,8 @@ def make_map(c_space):
     if cost_map is None or curEKF is None:
         return
 
+    # start_time = time.time()
+
     # Reset the path
     path = None
 
@@ -360,6 +372,7 @@ def make_map(c_space):
     if SHOW_PLOTS:
         draw_dstar(robot_pos, best_pos, cost_map, path, fig_num=2)
 
+    # print(f"plan time: {(time.time() - start_time) * 1000:02.02f}ms")
 
 def mt_dstar_node():
     # Setup node

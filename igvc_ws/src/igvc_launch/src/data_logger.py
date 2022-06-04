@@ -39,10 +39,11 @@ class DataLogger:
 def data_logger():
     rospy.init_node('data_logger', anonymous=True)
 
-    DataLogger()
+    dl = DataLogger()
 
     rospy.spin()
 
+    dl.csvfile.close()
 
 
 if __name__ == '__main__':

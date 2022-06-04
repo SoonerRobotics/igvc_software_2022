@@ -61,7 +61,7 @@ class ParticleFilterNode:
 
     def __init__(self):
         # Parameters
-        self.PF = pf.ParticleFilter(num_particles=500, gps_noise=[0.6], odom_noise=[0.05, 0.05, 0.1])
+        self.PF = pf.ParticleFilter(num_particles=500, gps_noise=[0.4], odom_noise=[0.05, 0.05, 0.1])
 
         # ROS Setup
         # rospy.Subscriber("/igvc/velocity", velocity, self.velocity_callback)

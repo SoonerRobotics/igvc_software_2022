@@ -229,7 +229,7 @@ class IGVCWindow(QMainWindow):
         if rospy.is_shutdown():
             # Cleanup with ROS is done
             app.quit()
-            self.csvfile.close()
+            # self.csvfile.close()
 
         self.draw_vision()
         # self.draw_path()

@@ -6,7 +6,7 @@ import rospy
 import math
 import itertools
 import time
-
+import sys
 from geometry_msgs.msg import Pose
 from nav_msgs.msg import OccupancyGrid, MapMetaData
 from std_msgs.msg import Header
@@ -31,7 +31,7 @@ metadata = MapMetaData(map_load_time = rospy.Time(), resolution=0.1,
 header = Header()
 header.frame_id = "map"
 
-max_range = 0.4 # meters
+max_range = 0.5 # meters
 no_go_percent = 0.75
 no_go_range = max_range * no_go_percent # meters
 
@@ -42,7 +42,7 @@ xxxs = list(range(-max_range, max_range + 1))
 circle_around_indicies = [(0,0,0)]
 for x in xxxs:
     for y in xxxs:
-        if max_range * no_go_percent <= math.sqrt(x**2 + y**2) < max_range:
+        if max_range * no_go_percent <= math.sqrt(x**2 + y**2) < max_range and (x+y)%3==0:
             circle_around_indicies.append((x, y, math.sqrt(x**2 + y**2)))
         # if x == 0 or y == 0:
         #     circle_around_indicies.append((x, y, math.sqrt(x**2 + y**2)))
@@ -104,6 +104,7 @@ def config_space_callback(event):
     config_pub.publish(config_msg)
 
     # rospy.loginfo(f"dilate time: {(time.time() - start)*1000:0.01f}ms")
+    sys.stdout.flush()
 
 
 

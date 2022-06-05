@@ -80,8 +80,8 @@ class ParticleFilter:
         if self.first_gps is None:
             self.first_gps = (data.latitude, data.longitude)
 
-        gps_x = (data.latitude - self.first_gps[0]) * 110984.8 # Approximations
-        gps_y = (self.first_gps[1] - data.longitude) * 90994.1
+        gps_x = (data.latitude - self.first_gps[0]) * 111086.2 # Approximations
+        gps_y = (self.first_gps[1] - data.longitude) * 81978.2
 
         if self.last_gps is None:
             self.last_gps = (gps_x, gps_y)

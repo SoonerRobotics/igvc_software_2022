@@ -60,29 +60,38 @@ cost_map = None
 curEKF = EKFState()
 
 # Practice Waypoints (North-bound)
-#orig_waypoints = [(42.66821182,-83.21845873),(42.66808596,-83.21844564),(42.66796006,-83.21843266)]
+# orig_waypoints = [(42.66821182,-83.21845873),(42.66808596,-83.21844564),(42.66796006,-83.21843266)]
+
+# Practice Waypoints (South-bound)
+# orig_waypoints = [(42.66796006,-83.21843266),(42.66808596,-83.21844564),(42.66821182,-83.21845873)]
 
 # Real Waypoints (North-bound)
-# orig_waypoints = [(42.66826972,-83.21934030),(42.66812064,-83.21936061),(42.66807663,-83.21935916),(42.66792771,-83.21932764)]
+# orig_waypoints = [(42.66826972,-83.21935030),(42.66812064,-83.21937061),(42.66807663,-83.21936916),(42.66792771,-83.21933764)]
 
 # Real Waypoints (South-bound)
-orig_waypoints = [(42.66792771,-83.21932764),(42.66807663,-83.21935916),(42.66812064,-83.21936061),(42.66826972,-83.21934030)]
+orig_waypoints = [(42.66792771,-83.21933764),(42.66808663,-83.21936916),(42.66812064,-83.21937061),(42.66826972,-83.21935030)]
 
 
 #waypoints = [(42.6681017,-83.2184545)]
 #waypoints = [(42.6683345, -83.2182354)]
 
-waypoints = [pt for pt in orig_waypoints]
+waypoints = []
+first_waypoints_time = -1
 
 # Best position to head to on the map (D* goal pos)
 best_pos = (0,0)
 
 def system_state_callback(data):
-    global system_state
+    global system_state, first_waypoints_time, waypoints
     system_state = SystemState(data.data)
 
-    if system_state == SystemState.AUTONOMOUS:
-        waypoints = [pt for pt in orig_waypoints]
+    if system_state != SystemState.AUTONOMOUS:
+        waypoints = []
+        first_waypoints_time = -1
+
+    if system_state == SystemState.AUTONOMOUS and first_waypoints_time == -1:
+        first_waypoints_time = time.time() + 40
+        # waypoints = [pt for pt in orig_waypoints]
         # print(f"Yaw is {curEKF.yaw/math.pi:0.1f}pi")
         #if math.pi/2 < curEKF.yaw < 3 * math.pi / 2:
             # Facing south, reverse waypoints
@@ -112,7 +121,7 @@ def get_angle_diff(to_angle, from_angle):
     return delta
 
 def c_space_callback(c_space):
-    global cost_map, map_reference, map_init, best_pos
+    global cost_map, map_reference, map_init, best_pos, waypoints, first_waypoints_time
 
     if curEKF is None:
         return
@@ -128,10 +137,14 @@ def c_space_callback(c_space):
 
     # Breath-first look for good points
     # This allows us to find a point within the range of obstacles by not
-    # exploring over obstacles.
+    # exploring over obstacles. 
     frontier = set()
     frontier.add((40,78))
     explored = set()
+
+    if first_waypoints_time > 0 and time.time() > first_waypoints_time:
+        first_waypoints_time = -2
+        waypoints = [pt for pt in orig_waypoints]
 
     if len(waypoints) > 0:
         next_waypoint = waypoints[0]
@@ -149,7 +162,7 @@ def c_space_callback(c_space):
     # best_heading_err = 0
 
     depth = 0
-    while depth < 30 and len(frontier) > 0:
+    while depth < 40 and len(frontier) > 0:
         curfrontier = copy.copy(frontier)
         for pos in curfrontier:
             x = pos[0] # left to right
@@ -158,11 +171,11 @@ def c_space_callback(c_space):
             # - Negative X value (encourage forward)
             # - Positive Y value (discourage left/right)
             # - Heading
-            cost = (80 - y) * 1.5 + depth * 1.5 - abs(50 - x)
+            cost = (80 - y) * 1.5 + depth * 2.5
 
             if len(waypoints) > 0:
                 heading_err_to_gps = abs(get_angle_diff(curEKF.yaw + math.atan2(40-x,80-y), heading_to_gps)) * 180 / math.pi
-                cost += (180 - heading_err_to_gps) * 0.9
+                cost -= max(heading_err_to_gps, 10)
 
             if cost > best_pos_cost:
                 best_pos_cost = cost

@@ -108,7 +108,7 @@ transform = PerspectiveTransform(0)
 def grass_filter(og_image):
     img = cv2.cvtColor(og_image, cv2.COLOR_BGR2HSV)
     # create a lower bound for a pixel value
-    lower = np.array([0, 0, 0])
+    lower = np.array([0, 0, 40])
     # create an upper bound for a pixel values
     upper = np.array([255, 140, 220])
     # detects all white pixels wihin the range specified earlier

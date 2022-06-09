@@ -31,7 +31,7 @@ metadata = MapMetaData(map_load_time = rospy.Time(), resolution=0.1,
 header = Header()
 header.frame_id = "map"
 
-max_range = 0.5 # meters
+max_range = 0.55 # meters
 no_go_percent = 0.75
 no_go_range = max_range * no_go_percent # meters
 

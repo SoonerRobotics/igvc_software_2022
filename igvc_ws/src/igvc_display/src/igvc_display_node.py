@@ -126,7 +126,7 @@ class IGVCWindow(QMainWindow):
         # self.cam = cv2.VideoCapture(0)
 
         # Setup Music
-        mixer.music.load('/home/igvc/music/boomersooner.wav')
+        mixer.music.load('/home/igvc/music/genki_dama.wav')
 
         # Subscribe to necessary topics
         rospy.Subscriber("/igvc_slam/local_config_space", OccupancyGrid, self.c_space_callback, queue_size=1)

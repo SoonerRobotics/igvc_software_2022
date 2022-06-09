@@ -60,19 +60,22 @@ cost_map = None
 curEKF = EKFState()
 
 # Practice Waypoints (North-bound)
-# orig_waypoints = [(42.66821182,-83.21845873),(42.66808596,-83.21844564),(42.66796006,-83.21843266)]
+#orig_waypoints = [(42.66821182,-83.21845873),(42.66808596,-83.21844564),(42.66796006,-83.21843266)]
 
 # Practice Waypoints (South-bound)
-# orig_waypoints = [(42.66796006,-83.21843266),(42.66808596,-83.21844564),(42.66821182,-83.21845873)]
+#orig_waypoints = [(42.66796006,-83.21843266),(42.66808596,-83.21844564),(42.66821182,-83.21845873)]
 
 # Real Waypoints (North-bound)
-#orig_waypoints = [(42.66826972,-83.21934030),(42.66812064,-83.21936061),(42.66807663,-83.21935916),(42.66792771,-83.21932764)]
+#orig_waypoints = [(42.66826972,-83.21934030),(42.66812064,-83.21936061),(42.66792771,-83.21932764)]
 
 # Real Waypoints (South-bound)
-#orig_waypoints = [(42.66792771,-83.21932764),(42.66807663,-83.21935916),(42.66812064,-83.21936061),(42.66826972,-83.21934030)]
+orig_waypoints = [(42.66792771,-83.21932764),(42.66807663,-83.21935916),(42.66826972,-83.21934030)]
+
+# Real Waypoints (North-bound with extra)
+# orig_waypoints = [(42.66826972, -83.2193403), (42.66819518, -83.21934046), (42.66812064, -83.21936061), (42.66807663, -83.21935916), (42.66800217, -83.2193534), (42.66792771, -83.21932764)]        
 
 # Real Waypoints (South-bound with extra)
-orig_waypoints = [(42.66792771,-83.21932764),(42.66800217,-83.21935840),(42.66807663,-83.21935916),(42.66812064,-83.21936061),(42.66819518,-83.21936546),(42.66826972,-83.21934030)]
+# orig_waypoints = [(42.66792771,-83.21932764),(42.66800217,-83.21935340),(42.66807663,-83.21935916),(42.66812064,-83.21936061),(42.66819518,-83.21934046),(42.66826972,-83.21934030)]
 
 #waypoints = [(42.6681017,-83.2184545)]
 #waypoints = [(42.6683345, -83.2182354)]
@@ -164,7 +167,7 @@ def c_space_callback(c_space):
     # best_heading_err = 0
 
     depth = 0
-    while depth < 40 and len(frontier) > 0:
+    while depth < 50 and len(frontier) > 0:
         curfrontier = copy.copy(frontier)
         for pos in curfrontier:
             x = pos[0] # left to right
@@ -173,7 +176,7 @@ def c_space_callback(c_space):
             # - Negative X value (encourage forward)
             # - Positive Y value (discourage left/right)
             # - Heading
-            cost = (80 - y) * 1.5 + depth * 2.5
+            cost = (80 - y) * 1.3 + depth * 2.2
 
             if len(waypoints) > 0:
                 heading_err_to_gps = abs(get_angle_diff(curEKF.yaw + math.atan2(40-x,80-y), heading_to_gps)) * 180 / math.pi

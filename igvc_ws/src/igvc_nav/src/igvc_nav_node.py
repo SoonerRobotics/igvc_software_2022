@@ -125,23 +125,23 @@ def timer_callback(event):
         #     error = 0
 
         # Base forward velocity for both wheels
-        forward_speed = 0.7 * (1 - abs(error))**5
+        forward_speed = 0.9 * (1 - abs(error))**5
 
         # Define wheel linear velocities
         # Add proprtional error for turning.
         # TODO: PID instead of just P
-        motor_pkt.left = (forward_speed - clamp(0.4 * error, -0.2, 0.2))
-        motor_pkt.right = (forward_speed + clamp(0.4 * error, -0.2, 0.2))
+        motor_pkt.left = (forward_speed - clamp(0.5 * error, -0.25, 0.25))
+        motor_pkt.right = (forward_speed + clamp(0.5 * error, -0.25, 0.25))
 
     else:
         # We couldn't find a suitable direction to head, stop the robot.
         if back_count == -1:
-            back_count = 8
+            back_count = 5
         else:
             back_count -= 1
         
-        motor_pkt.left = -0.2
-        motor_pkt.right = -0.2
+        motor_pkt.left = -0.35
+        motor_pkt.right = -0.25
 
     if system_state == SystemState.AUTONOMOUS:
         publy.publish(motor_pkt)

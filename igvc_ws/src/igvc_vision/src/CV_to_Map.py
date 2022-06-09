@@ -11,6 +11,9 @@ from sensor_msgs.msg import Image
 
 import matplotlib.pyplot as plt
 
+from cv_bridge import CvBridge
+bridge = CvBridge()
+
 occupancy_grid_size = 200
 
 start_time = None
@@ -21,7 +24,7 @@ height_offset = 58
 captured_width = 70
 captured_height = 50
 
-frame_rate = 8.0 # Hz
+frame_rate = 10.0 # Hz
 
 preview_pub = rospy.Publisher("/igvc/preview", Image, queue_size=1)
 image_pub = rospy.Publisher("/igvc/lane_map", OccupancyGrid, queue_size=1)
@@ -31,7 +34,7 @@ header.frame_id = "base_link"
 
 map_info = MapMetaData()
 map_info.width = occupancy_grid_size
-map_info.height = occupancy_grid_size
+map_info.height = 100
 map_info.resolution = 0.1
 map_info.origin = Pose()
 map_info.origin.position.x = -10
@@ -49,7 +52,7 @@ class PerspectiveTransform:
         self.camera_angle = camera_angle
 
         # Ratio of number of pixels between top points of the trapezoid and their nearest vertical border
-        self.horizontal_corner_cut_ratio = 0.3
+        self.horizontal_corner_cut_ratio = 0.26
 
         # Output image dimensions
         self.output_img_shape_x = 640
@@ -98,16 +101,16 @@ class PerspectiveTransform:
 
         return output
 
-transform = PerspectiveTransform(5)
+transform = PerspectiveTransform(0)
 
 # returns a filtered image and unfiltered image. This is needed for white lines on green grass
 # output are two images, First output is the filtered image, Second output is the original pre-filtered image
 def grass_filter(og_image):
     img = cv2.cvtColor(og_image, cv2.COLOR_BGR2HSV)
     # create a lower bound for a pixel value
-    lower = np.array([0, 0, 100])
+    lower = np.array([0, 0, 40])
     # create an upper bound for a pixel values
-    upper = np.array([255, 80, 200])
+    upper = np.array([255, 140, 210])
     # detects all white pixels wihin the range specified earlier
     mask = cv2.inRange(img, lower, upper)
     mask = 255 - mask
@@ -128,10 +131,10 @@ def camera_callback(data):
         print("cam read problem")
         return
 
-    image = cv2.GaussianBlur(image, (7,7), 0)
-    image = cv2.GaussianBlur(image, (7,7), 0)
+    blurred_image = cv2.GaussianBlur(image, (5,5), 0)
+    blurred_image = cv2.GaussianBlur(blurred_image, (5,5), 0)
 
-    pre_or_post_filtered_image = grass_filter(image)
+    pre_or_post_filtered_image = grass_filter(blurred_image)
 
     # gives the height and width of the image from the dimensions given
     height = image.shape[0]
@@ -140,7 +143,7 @@ def camera_callback(data):
     # used for non-hd video
     region_of_interest_vertices = [
         (0, height),
-        (width / 2, height / 2 + 70),
+        (width / 2, height / 2 + 120),
         (width, height),
     ]
 
@@ -157,14 +160,22 @@ def camera_callback(data):
     perpsective_crop = transform.trim_top_border(blurred)
     perspective_warp = transform.convert_to_flat(perpsective_crop)
 
-    if imshowout == None:
-        imshowout = plt.imshow(perspective_warp)
-        plt.show(block=False)
-        plt.pause(0.001)
-    else:
-        imshowout.set_data(perspective_warp)
-        plt.show(block=False)
-        plt.pause(0.001)
+    pub_map = transform.convert_to_flat(transform.trim_top_border(region_of_interest(image, np.array([region_of_interest_vertices], np.int32))))
+    # pub_map = cv2.resize(pub_map, dsize=(200, 200))
+    # pub_map = pub_map[vertical_offset:,:]
+    # pub_map = cv2.copyMakeBorder(pub_map, vertical_offset + height_offset, 200 - captured_height - height_offset, (200 - captured_width) // 2, (200 - captured_width) // 2, cv2.BORDER_CONSTANT, value=0)
+    preview_pub.publish(bridge.cv2_to_imgmsg(pub_map))
+
+    
+
+    # if imshowout == None:
+    #     imshowout = plt.imshow(perspective_warp)
+    #     plt.show(block=False)
+    #     plt.pause(0.001)
+    # else:
+    #     imshowout.set_data(perspective_warp)
+    #     plt.show(block=False)
+    #     plt.pause(0.001)
 
 
     # publishes to the node
@@ -190,12 +201,11 @@ def region_of_interest(img, vertices):
 
 def numpy_to_occupancyGrid(data_map):
     # dsize is (width, height) and copyMakeBorder is (tp, bottom, left, right)
-    data_map = cv2.dilate(data_map, (5, 5), iterations=3)
-    data_map = cv2.resize(data_map, dsize=(captured_width, captured_height), interpolation=cv2.INTER_LINEAR) / 2
-    data_map = data_map[vertical_offset:,:]
-    data_map = cv2.copyMakeBorder(data_map, vertical_offset + height_offset, 200 - captured_height - height_offset, (200 - captured_width) // 2, (200 - captured_width) // 2, cv2.BORDER_CONSTANT, value=0)
-    data_map = cv2.flip(data_map, 0)
-    data_map = cv2.rotate(data_map, cv2.ROTATE_90_COUNTERCLOCKWISE)
+    # data_map = cv2.dilate(data_map, (5, 5), iterations=1)
+    # data_map = data_map[vertical_offset:,:]
+    data_map = cv2.resize(data_map, dsize=(80, 80), interpolation=cv2.INTER_LINEAR) / 2
+    # data_map = cv2.flip(data_map, 0)
+    # data_map = cv2.rotate(data_map, cv2.ROTATE_90_COUNTERCLOCKWISE)
     flattened = list(data_map.flatten().astype(int))
 
     # print(f"data_map shape: {data_map.shape}")

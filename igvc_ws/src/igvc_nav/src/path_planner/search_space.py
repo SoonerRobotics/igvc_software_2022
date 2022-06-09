@@ -15,9 +15,9 @@ class SearchSpace:
         self.grid = []
 
         # Populate the grid
-        for i in range(self.W):
+        for i in range(self.H):
             row = []
-            for j in range(self.H):
+            for j in range(self.W):
                 row.append(Node(i,j))
             self.grid.append(row)
 
@@ -27,10 +27,10 @@ class SearchSpace:
 
     def get_successors(self, node):
         succ = []
-        for i in range(node.row-1, node.row+2):
-            for j in range(node.col-1, node.col+2):
-                if i >= 0 and i < self.H and j >= 0 and j < self.W and (i != node.row or j != node.col):
-                    succ.append(self.grid[i][j])
+        for y in range(node.row-1, node.row+2):
+            for x in range(node.col-1, node.col+2):
+                if y >= 0 and y < self.H and x >= 0 and x < self.W and (y != node.row or x != node.col):
+                    succ.append(self.grid[y][x])
 
         return succ
 
@@ -51,13 +51,13 @@ class SearchSpace:
         return rhs_map_data
 
     def load_search_space_from_map(self, map_data):
-        for i in range(self.H):
-            for j in range(self.W):
-                cost = map_data[(self.H * i) + j]
-                if cost >= 100 or cost < 0:
-                    self.grid[i][j].set_cost(Node.INFINITY)
+        for y in range(self.H):
+            for x in range(self.W):
+                cost = map_data[(self.W * y) + x]
+                if cost >= 100:
+                    self.grid[y][x].set_cost(Node.INFINITY)
                 else:
-                    self.grid[i][j].set_cost(cost)
+                    self.grid[y][x].set_cost(max(cost,0))
 
     def get_deleteable_nodes(self, start_node):
         # Define the lists for this search
@@ -99,20 +99,20 @@ class SearchSpace:
         changed_nodes = []
 
         # Go through and update each cell
-        for i in range(self.H):
-            for j in range(self.W):
+        for y in range(self.H):
+            for x in range(self.W):
                 # Get the old cost
-                old_cost = self.grid[i][j].cost
+                old_cost = self.grid[y][x].cost
 
                 # Update the cost of the node
-                if new_map[(self.H * i) + j] != 0:
-                    self.grid[i][j].set_cost(Node.INFINITY)
+                if new_map[(self.W * y) + x] != 0:
+                    self.grid[y][x].set_cost(Node.INFINITY)
                 else:
-                    self.grid[i][j].set_cost(0)
+                    self.grid[y][x].set_cost(0)
 
                 # Detect if the node changed costs
-                if self.grid[i][j].cost != old_cost:
-                    changed_nodes.append(self.grid[i][j])
+                if self.grid[y][x].cost != old_cost:
+                    changed_nodes.append(self.grid[y][x])
 
         # Return the nodes that have changed so the edge costs can be updated
         return changed_nodes

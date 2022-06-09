@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 import rospy
-from igvc_msgs.msg import gps, velocity, motors, EKFState, imuodom
+from igvc_msgs.msg import gps, velocity, motors, EKFState, deltaodom
 from sensor_msgs.msg import Imu
 from std_msgs.msg import Bool
 from tf import transformations
@@ -52,8 +52,10 @@ R = None # meas uncertainty
 
 initialized = False # init flag
 mobi_start = False # mobility start/stop flag
-start_gps = None # starting GPS coords
+start_gps = gps() # starting GPS coords
 cur_gps = None # equiv GPS coords for our EKF position
+odom = None
+dead_cum = (0,0,0)
 
 ## Publishers
 state_pub = None
@@ -192,6 +194,11 @@ def timer_callback(event):
         state_msg.yaw_rate = X[5]
         state_msg.left_velocity = X[6] * WHEEL_RADIUS
         state_msg.right_velocity = X[7] * WHEEL_RADIUS
+
+        state_msg.x = dead_cum[0]
+        state_msg.y = dead_cum[1]
+        state_msg.yaw = dead_cum[2]
+
         state_pub.publish(state_msg)
 
 # ## print state vector to the console in a readable format
@@ -250,14 +257,20 @@ def meas_imu(imu_msg):
     yaw_rate = imu_msg.angular_velocity.z #TODO check sign
     Z_buffer[3] = yaw_rate
     
-def meas_vel(vel_msg):
-    global Z_buffer
-    Z_buffer[4] = vel_msg.leftVel / WHEEL_RADIUS
-    Z_buffer[5] = vel_msg.rightVel / WHEEL_RADIUS
+def meas_deltaodom(data:deltaodom):
+    global odom, dead_cum
+
+    x = dead_cum[0]
+    y = dead_cum[1]
+    theta = dead_cum[2]
+    dead_cum = (x + data.delta_x * cos(theta) + data.delta_y * sin(theta), y + data.delta_x * sin(theta) + data.delta_y * cos(theta), theta + data.delta_theta)
 
 def init_mobi_start(mobi_msg):
-    global mobi_start
-    mobi_start = True
+    global mobi_start, dead_cum
+    mobi_start = mobi_msg.data
+
+    if not mobi_start:
+        dead_cum = (0,0,0)
 
 def main():
     global state_pub
@@ -273,7 +286,7 @@ def main():
     ## Subscribe to Sensor Values
     rospy.Subscriber("/igvc/gps", gps, meas_gps, queue_size=1)
     rospy.Subscriber("/imu/", Imu, meas_imu, queue_size=1)
-    rospy.Subscriber("/igvc/velocity", velocity, meas_vel, queue_size=1)
+    rospy.Subscriber("/igvc/deltaodom", deltaodom, meas_deltaodom, queue_size=1)
     ## Subscribe to Control Parameters
     #rospy.Subscriber("/igvc/motors_raw", motors, update_control_signal, queue_size=1)
 

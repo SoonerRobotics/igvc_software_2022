@@ -5,8 +5,8 @@ import os
 import matplotlib.pyplot as plt
 
 
-pf = pf.ParticleFilter(num_particles=400, gps_noise=[0.2], odom_noise=[0.1, 0.2, 0.8])
-test_file = "pf_test_20220520-185151.csv"
+pf = pf.ParticleFilter(num_particles=400, gps_noise=[0.8], odom_noise=[0.05, 0.05, 0.1])
+test_file = "pf_test_20220520-190753.csv"
 test_noend = test_file.split(".")[0]
 
 display_particles = True
@@ -33,7 +33,7 @@ with open(test_file,"r") as file:
     gps_ypoints = []
 
     # read in file
-    tsv_file = pd.read_csv(file,engine='c', header=0)
+    tsv_file = pd.read_csv(file,engine='c', header=0, error_bad_lines=False)
 
     for idx, row in tsv_file.iterrows():
         display_details = (idx, test_noend, display_particles) # info needed to save displaying particles per update
@@ -59,8 +59,10 @@ with open(test_file,"r") as file:
 
     #plt.plot(xpoints, ypoints, plt.quiver(u,v), '.', label='PF', color='blue')
     plt.cla()
-    plt.quiver(xpoints, ypoints, u, v, linewidths=1, label='PF', color='blue')
-    plt.plot(gps_xpoints, gps_ypoints, '.', label='GPS', color='red')
+    plt.scatter(ypoints, xpoints, linewidths=0.2, label='PF', color='blue')
+    plt.plot(gps_ypoints, gps_xpoints, '.', label='GPS', color='red')
+    plt.xlim(0, -18)
+    plt.ylim(-18, 0)
     plt.legend()
     plt.savefig('plots/particles.png')
     plt.show()

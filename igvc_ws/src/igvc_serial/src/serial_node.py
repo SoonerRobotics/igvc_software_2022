@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+from time import sleep
 from turtle import left, right
 import rospy
 import csv

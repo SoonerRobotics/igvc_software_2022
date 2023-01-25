@@ -131,13 +131,13 @@ def timer_callback(event):
         motor_pkt.left = -0.25
         motor_pkt.right = -0.25
 
-    if system_state == SystemState.AUTONOMOUS:
-        publy.publish(motor_pkt)
-    elif system_state == SystemState.DISABLED:
-        # Nav node will be in charge of stopping the robot during DISABLE
-        motor_pkt.left = 0
-        motor_pkt.right = 0
-        publy.publish(motor_pkt)
+    # if system_state == SystemState.AUTONOMOUS:
+    publy.publish(motor_pkt)
+    # elif system_state == SystemState.DISABLED:
+    #     # Nav node will be in charge of stopping the robot during DISABLE
+    #     motor_pkt.left = 0
+    #     motor_pkt.right = 0
+    #     publy.publish(motor_pkt)
 
 
 def nav():

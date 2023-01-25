@@ -21,3 +21,9 @@ As part of the `robot_setup.sh` script, a systemd service named `igvc` will be c
 # Updating dependencies
 
 To update the dependencies in this repo, modify the `setup/igvc.deps` file, and then run `vcs import < igvc.deps` from the setup folder.
+
+# Super Secret How To Win a Simulated Competition Instructions
+
+Run this code version.
+
+Use [SCR Simulator](https://github.com/SoonerRobotics/scr_simulator) Release 27.

@@ -7,13 +7,17 @@ import time
 from nav_msgs.msg import OccupancyGrid, MapMetaData
 from std_msgs.msg import Header
 from geometry_msgs.msg import Pose
-from sensor_msgs.msg import Image
+
+from cv_bridge import CvBridge, CvBridgeError
+from sensor_msgs.msg import Image, CompressedImage
 
 import matplotlib.pyplot as plt
 
 occupancy_grid_size = 200
 
 start_time = None
+
+bridge = CvBridge()
 
 # Output map scale and offset
 vertical_offset = 5
@@ -105,9 +109,9 @@ transform = PerspectiveTransform(5)
 def grass_filter(og_image):
     img = cv2.cvtColor(og_image, cv2.COLOR_BGR2HSV)
     # create a lower bound for a pixel value
-    lower = np.array([0, 0, 100])
+    lower = np.array([0, 0, 27])
     # create an upper bound for a pixel values
-    upper = np.array([255, 80, 200])
+    upper = np.array([255, 80, 165])
     # detects all white pixels wihin the range specified earlier
     mask = cv2.inRange(img, lower, upper)
     mask = 255 - mask
@@ -121,12 +125,14 @@ def camera_callback(data):
 
     # start_time = time.time()
 
-    read_success, image = cam.read()
+    # read_success, image = cam.read()
     # print(f"read_success: {read_success}, read time: {(time.time() - start_time) * 1000:02.02f}ms")
 
-    if not read_success:
-        print("cam read problem")
-        return
+    image = bridge.compressed_imgmsg_to_cv2(data, desired_encoding="passthrough")
+
+    # if not read_success:
+    #     print("cam read problem")
+    #     return
 
     image = cv2.GaussianBlur(image, (7,7), 0)
     image = cv2.GaussianBlur(image, (7,7), 0)
@@ -218,13 +224,13 @@ if __name__ == '__main__':
     # call pipeline function which will return a data_map which is just a 2d numpy array
     # Need to subscribe to an image node for images data to use
     rospy.init_node('lane_finder', anonymous=True)
-    # rospy.Subscriber("/cv_camera/image_raw/compressed", CompressedImage, camera_callback)
+    rospy.Subscriber("/igvc/camera/compressed", CompressedImage, camera_callback)
     
-    cam = cv2.VideoCapture(0, cv2.CAP_V4L2)
-    cam.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
-    cam.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
+    # cam = cv2.VideoCapture(0, cv2.CAP_V4L2)
+    # cam.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
+    # cam.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
 
-    rospy.Timer(rospy.Duration(1.0/frame_rate), camera_callback)
+    # rospy.Timer(rospy.Duration(1.0/frame_rate), camera_callback)
 
 # while true loop
     rospy.spin()

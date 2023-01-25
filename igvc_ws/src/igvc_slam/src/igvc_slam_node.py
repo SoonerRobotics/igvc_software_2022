@@ -25,7 +25,7 @@ metadata = MapMetaData(map_load_time = rospy.Time(), resolution=0.1,
 header = Header()
 header.frame_id = "map"
 
-max_range = 5
+max_range = 6
 xxxs = list(range(-max_range, max_range + 1))
 circle_around_indicies = []
 for x in xxxs:

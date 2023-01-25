@@ -13,5 +13,8 @@
 
     <!-- Mapping -->
     <include file="$(find igvc_slam)/launch/igvc_slam_sim.launch"/>
+
+    <!-- Display -->
+    <include file="$(find igvc_display)/launch/robot_display.launch"/>
     
 </launch>
